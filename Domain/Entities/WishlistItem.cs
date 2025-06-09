@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    internal class WishlistItem
+    public class WishlistItem
     {
+        public int WishlistItemId { get; set; }
+        public string Title { get; set; }
+        public string Author { get; set; } 
+        public string Notes { get; set; }
+        public DateTime DateAdded { get; set; }
     }
 }
