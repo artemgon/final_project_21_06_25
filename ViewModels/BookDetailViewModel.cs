@@ -1,5 +1,5 @@
-﻿using BookLibrary.ApplicationServices.Contracts; 
-using Domain.Entities;
+﻿using BookLibrary.ApplicationServices.Contracts; // For IBookService
+using Domain.Entities; // For Book entity
 using BookLibrary.ViewModels.Base;
 
 namespace BookLibrary.ViewModels.BookManagement
@@ -18,18 +18,20 @@ namespace BookLibrary.ViewModels.BookManagement
         public BookDetailViewModel(IBookService bookService)
         {
             _bookService = bookService;
-            CurrentBook = new Book();
+            CurrentBook = new Book(); // Initialize with an empty book for default state
         }
 
         public void LoadForNewBook()
         {
-            CurrentBook = new Book();
+            CurrentBook = new Book(); // Resets for new book entry
+            // Clear any related selections (authors, genres) here later
         }
 
         public void LoadBook(int bookId)
         {
             CurrentBook = _bookService.GetBookDetails(bookId);
+            // Load related data (authors, genres) here later
         }
-
+        // Add Save/Cancel Commands, validation logic later
     }
 }

@@ -1,12 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ApplicationServices.Contracts;
+using BookLibrary.ApplicationServices.Contracts;
+using Domain.Entities;
+using BookLibrary.ViewModels.Base;
+using Domain.Entities;
+using System.Collections.ObjectModel;
 
-namespace ViewModels
+namespace BookLibrary.ViewModels.AuthorManagement
 {
-    internal class AuthorManagerViewModel
+    public class AuthorManagerViewModel : ViewModelBase
     {
+        private readonly IAuthorService _authorService;
+        private ObservableCollection<Author> _authors;
+        public ObservableCollection<Author> Authors
+        {
+            get => _authors;
+            set => SetProperty(ref _authors, value);
+        }
+
+        private Author _selectedAuthor;
+        public Author SelectedAuthor
+        {
+            get => _selectedAuthor;
+            set => SetProperty(ref _selectedAuthor, value);
+        }
+
+        public AuthorManagerViewModel(IAuthorService authorService)
+        {
+            _authorService = authorService;
+            Authors = new ObservableCollection<Author>();
+            LoadAuthors(); // Load data on initialization
+        }
+
+        private void LoadAuthors()
+        {
+            Authors.Clear();
+            foreach (var author in _authorService.GetAllAuthors())
+            {
+                Authors.Add(author);
+            }
+        }
+        // Add Add/Edit/Delete commands later
     }
 }
