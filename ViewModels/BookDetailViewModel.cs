@@ -1,8 +1,7 @@
 ﻿using BookLibrary.ApplicationServices.Contracts; // For IBookService
 using Domain.Entities; // For Book entity
-using BookLibrary.ViewModels.Base;
 
-namespace BookLibrary.ViewModels.BookManagement
+namespace ViewModels
 {
     public class BookDetailViewModel : ViewModelBase
     {

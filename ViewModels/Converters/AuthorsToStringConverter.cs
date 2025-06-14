@@ -6,7 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Data; // Required for IValueConverter
 
-namespace BookLibrary.ViewModels.Converters
+namespace ViewModels.Converters
 {
     public class AuthorsToStringConverter : IValueConverter
     {

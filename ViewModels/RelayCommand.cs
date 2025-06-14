@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input; 
 
-namespace BookLibrary.ViewModels.Commands
+namespace ViewModels
 {
     public class RelayCommand : ICommand
     {

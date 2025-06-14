@@ -1,10 +1,9 @@
 ﻿using ApplicationServices.Contracts;
 using BookLibrary.ApplicationServices.Contracts;
 using Domain.Entities;
-using BookLibrary.ViewModels.Base;
 using System.Collections.ObjectModel;
 
-namespace BookLibrary.ViewModels.GenreManagement
+namespace ViewModels
 {
     public class GenreManagerViewModel : ViewModelBase
     {

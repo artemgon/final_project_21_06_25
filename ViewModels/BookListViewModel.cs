@@ -1,14 +1,12 @@
 ﻿using BookLibrary.ApplicationServices.Contracts;
 using Domain.Entities;
-using BookLibrary.ViewModels.Base;
-using BookLibrary.ViewModels.Commands;
 using System; 
 using System.Collections.ObjectModel;
 using System.Linq; 
 using System.Windows; 
 using System.Windows.Input;
 
-namespace BookLibrary.ViewModels.BookManagement
+namespace ViewModels
 {
     public class BookListViewModel : ViewModelBase
     {

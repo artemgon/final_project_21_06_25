@@ -3,10 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=BookLibrary.ViewModels"
-             xmlns:converters="clr-namespace:BookLibrary.ViewModels.Converters;assembly=BookLibrary.ViewModels"
+             xmlns:viewmodels="clr-namespace:ViewModels;assembly=BookLibrary.ViewModels"
+             xmlns:converters="clr-namespace:ViewModels;assembly=BookLibrary.ViewModels"
+             xmlns:converters1="clr-namespace:ViewModels.Converters;assembly=ViewModels"
+             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance viewmodels:BookListViewModel, IsDesignTimeCreatable=True}"
+             d:DataContext="{d:DesignInstance viewModels:BookListViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
         <Grid.RowDefinitions>
@@ -50,6 +52,6 @@
     </Grid>
 
     <UserControl.Resources>
-        <converters:AuthorsToStringConverter x:Key="AuthorsConverter"/>
+        <converters1:AuthorsToStringConverter x:Key="AuthorsConverter"/>
     </UserControl.Resources>
 </UserControl>

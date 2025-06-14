@@ -1,13 +1,7 @@
-﻿using BookLibrary.ViewModels.AuthorManagement; 
-using BookLibrary.ViewModels.Base;
-using BookLibrary.ViewModels.BookManagement;
-using BookLibrary.ViewModels.Commands;
-using BookLibrary.ViewModels.GenreManagement;   
-using BookLibrary.ViewModels.WishlistManagement; 
-using System.Windows.Input;
+﻿using System.Windows.Input;
 
 
-namespace BookLibrary.ViewModels
+namespace ViewModels
 {
     public class MainViewModel : ViewModelBase
     {

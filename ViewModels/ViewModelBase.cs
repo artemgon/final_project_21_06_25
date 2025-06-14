@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 
-namespace BookLibrary.ViewModels.Base
+namespace  ViewModels
 {
     public abstract class ViewModelBase : INotifyPropertyChanged
     {

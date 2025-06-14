@@ -1,10 +1,9 @@
 ﻿using BookLibrary.ApplicationServices.Contracts;
 using Domain.Entities;
-using BookLibrary.ViewModels.Base;
 using System.Collections.ObjectModel;
 using System.Windows; // For MessageBox (for temporary messages)
 
-namespace BookLibrary.ViewModels.WishlistManagement
+namespace ViewModels
 {
     public class WishlistManagerViewModel : ViewModelBase
     {

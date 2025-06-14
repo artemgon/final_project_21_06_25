@@ -1,11 +1,8 @@
 ﻿using ApplicationServices.Contracts;
-using BookLibrary.ApplicationServices.Contracts;
-using Domain.Entities;
-using BookLibrary.ViewModels.Base;
 using Domain.Entities;
 using System.Collections.ObjectModel;
 
-namespace BookLibrary.ViewModels.AuthorManagement
+namespace ViewModels
 {
     public class AuthorManagerViewModel : ViewModelBase
     {
