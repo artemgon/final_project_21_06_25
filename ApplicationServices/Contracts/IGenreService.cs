@@ -5,10 +5,9 @@ namespace ApplicationServices.Contracts
 {
     public interface IGenreService
     {
-        IEnumerable<Genre> GetAllGenres();
-        Genre GetGenreById(int id);
-        int CreateGenre(Genre genre);
-        void UpdateGenre(Genre genre);
-        void DeleteGenre(int id);
+        Task<IEnumerable<Genre>> GetAllGenresAsync();
+        Task AddGenreAsync(Genre genre);
+        Task UpdateGenreAsync(Genre genre);
+        Task DeleteGenreAsync(int genreId);
     }
 }

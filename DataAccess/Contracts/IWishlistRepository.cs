@@ -1,14 +1,16 @@
-﻿using Domain.Entities;
+﻿// BookLibrary.DataAccess.Contracts/IWishlistRepository.cs
+using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace BookLibrary.DataAccess.Contracts
+namespace DataAccess.Contracts
 {
     public interface IWishlistRepository
     {
-        IEnumerable<WishlistItem> GetAll();
-        WishlistItem GetById(int id);
-        int Add(WishlistItem item);
-        void Update(WishlistItem item);
-        void Delete(int id);
+        Task<IEnumerable<WishlistItem>> GetAllAsync();
+        Task<int> AddAsync(WishlistItem entity);
+        public Task<WishlistItem> GetByIdAsync(int id);
+        public Task DeleteAsync(int id);
+        Task SaveChangesAsync();
     }
 }

@@ -3,36 +3,42 @@ using Dapper;
 using DataAccess.Database;
 using Domain.Entities;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using DataAccess.Contracts;
 
-namespace BookLibrary.DataAccess.Implementations
+namespace DataAccess.Implementations
 {
     public class WishlistRepository : IWishlistRepository
     {
         private readonly DbConnectionFactory _connectionFactory;
+        private IDbConnection _connection;
 
         public WishlistRepository(DbConnectionFactory connectionFactory)
         {
             _connectionFactory = connectionFactory;
         }
 
-        public IEnumerable<WishlistItem> GetAll()
+        public async Task<IEnumerable<WishlistItem>> GetAllAsync()
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.Query<WishlistItem>("SELECT * FROM Wishlist ORDER BY DateAdded DESC").ToList();
+                return await connection.QueryAsync<WishlistItem>("SELECT * FROM Wishlist ORDER BY DateAdded DESC");
             }
         }
 
-        public WishlistItem GetById(int id)
+        // Make sure you have 'using System.Threading.Tasks;' at the top of your file.
+
+        public async Task<WishlistItem> GetByIdAsync(int id) // Changed return type to Task<WishlistItem> and added 'async'
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.QuerySingleOrDefault<WishlistItem>("SELECT * FROM Wishlist WHERE WishlistItemId = @Id", new { Id = id });
+                // Changed to QuerySingleOrDefaultAsync and added 'await'
+                return await connection.QuerySingleOrDefaultAsync<WishlistItem>("SELECT * FROM WishlistItems WHERE WishlistItemId = @Id", new { Id = id });
             }
         }
 
-        public int Add(WishlistItem item)
+       public async Task<int> AddAsync(WishlistItem item)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
@@ -40,11 +46,11 @@ namespace BookLibrary.DataAccess.Implementations
                     INSERT INTO Wishlist (Title, Author, Notes)
                     VALUES (@Title, @Author, @Notes);
                     SELECT CAST(SCOPE_IDENTITY() as int)";
-                return connection.ExecuteScalar<int>(sql, item);
+                return await connection.ExecuteScalarAsync<int>(sql, item);
             }
         }
 
-        public void Update(WishlistItem item)
+        public async Task UpdateAsync(WishlistItem item)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
@@ -54,16 +60,30 @@ namespace BookLibrary.DataAccess.Implementations
                         Author = @Author,
                         Notes = @Notes
                     WHERE WishlistItemId = @WishlistItemId";
-                connection.Execute(sql, item);
+                await connection.ExecuteAsync(sql, item);
             }
         }
 
-        public void Delete(int id)
+        public async Task DeleteAsync(int id)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                connection.Execute("DELETE FROM Wishlist WHERE WishlistItemId = @Id", new { Id = id });
+                await connection.ExecuteAsync("DELETE FROM Wishlist WHERE WishlistItemId = @Id", new { Id = id });
             }
+        }
+        
+        public Task SaveChangesAsync()
+        {
+            // This is the "commit point" for operations performed using the shared _connection.
+            // It closes and disposes of the connection, making any changes persistent.
+            if (_connection != null && _connection.State == ConnectionState.Open)
+            {
+                _connection.Close();
+                _connection.Dispose();
+                _connection = null; // Clear the reference to the disposed connection
+            }
+            // Return a completed task since no asynchronous database operation is happening directly here.
+            return Task.CompletedTask;
         }
     }
 }

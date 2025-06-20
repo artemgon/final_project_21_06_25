@@ -4,7 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Data; // Required for IValueConverter
+using System.Windows.Data;
+using BookLibrary.Domain.Entities; // Required for IValueConverter
 
 namespace ViewModels.Converters
 {

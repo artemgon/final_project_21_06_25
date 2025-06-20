@@ -1,14 +1,17 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using BookLibrary.Domain.Entities;
 
 namespace DataAccess.Contracts
 {
     public interface IAuthorRepository
     {
-        IEnumerable<Author> GetAll();
-        Author GetById(int id);
-        int Add(Author author);
-        void Update(Author author);
-        void Delete(int id);
+        Task<IEnumerable<Author>> GetAllAsync();
+        public Task<Author> GetByIdAsync(int id);
+        Task<int> AddAsync(Author entity);
+        public Task UpdateAsync(Author author);
+        public Task DeleteAsync(int id);
+        Task SaveChangesAsync();
     }
 }

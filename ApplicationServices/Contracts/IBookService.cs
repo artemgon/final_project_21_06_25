@@ -1,15 +1,16 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BookLibrary.ApplicationServices.Contracts
 {
     public interface IBookService
     {
-        IEnumerable<Book> GetAllBooksWithDetails();
-        Book GetBookDetails(int id);
-        int CreateBook(Book book, IEnumerable<int> authorIds, IEnumerable<int> genreIds);
-        void UpdateBook(Book book, IEnumerable<int> authorIds, IEnumerable<int> genreIds);
-        void DeleteBook(int id);
-        IEnumerable<Book> SearchBooks(string searchTerm = null, string readingStatus = null, int? genreId = null);
+        Task<IEnumerable<Book>> GetAllBooksWithDetailsAsync(); 
+        Task<Book> GetBookDetailsAsync(int bookId); 
+        Task<IEnumerable<Book>> SearchBooksAsync(string searchTerm, string readingStatus, int? genreId); 
+        Task AddBookAsync(Book book);
+        Task UpdateBookAsync(Book book);
+        Task DeleteBookAsync(int bookId);
     }
 }

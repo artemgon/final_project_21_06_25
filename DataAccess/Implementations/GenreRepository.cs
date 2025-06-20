@@ -3,36 +3,42 @@ using Dapper;
 using DataAccess.Database;
 using Domain.Entities;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using DataAccess.Contracts;
 
-namespace BookLibrary.DataAccess.Implementations
+namespace DataAccess.Implementations
 {
     public class GenreRepository : IGenreRepository
     {
         private readonly DbConnectionFactory _connectionFactory;
+        private IDbConnection _connection;
 
         public GenreRepository(DbConnectionFactory connectionFactory)
         {
             _connectionFactory = connectionFactory;
         }
 
-        public IEnumerable<Genre> GetAll()
+        public async Task<IEnumerable<Genre>> GetAllAsync()
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.Query<Genre>("SELECT * FROM Genres ORDER BY GenreName").ToList();
+                return await connection.QueryAsync<Genre>("SELECT * FROM Genres ORDER BY GenreName"); ; // Changed to ToListAsync for better async handling
             }
         }
 
-        public Genre GetById(int id)
+        // Make sure you have 'using System.Threading.Tasks;' at the top of your file.
+
+        public async Task<Genre> GetByIdAsync(int id) // Changed return type to Task<Genre> and added 'async'
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.QuerySingleOrDefault<Genre>("SELECT * FROM Genres WHERE GenreId = @Id", new { Id = id });
+                // Changed to QuerySingleOrDefaultAsync and added 'await'
+                return await connection.QuerySingleOrDefaultAsync<Genre>("SELECT * FROM Genres WHERE GenreId = @Id", new { Id = id });
             }
         }
 
-        public int Add(Genre genre)
+        public async Task<int> AddAsync(Genre genre)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
@@ -40,25 +46,39 @@ namespace BookLibrary.DataAccess.Implementations
                     INSERT INTO Genres (GenreName)
                     VALUES (@GenreName);
                     SELECT CAST(SCOPE_IDENTITY() as int)";
-                return connection.ExecuteScalar<int>(sql, genre);
+                return await connection.ExecuteScalarAsync<int>(sql, genre);
             }
         }
 
-        public void Update(Genre genre)
+        public async Task UpdateAsync(Genre genre)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
                 var sql = "UPDATE Genres SET GenreName = @GenreName WHERE GenreId = @GenreId";
-                connection.Execute(sql, genre);
+                await connection.ExecuteAsync(sql, genre);
             }
         }
 
-        public void Delete(int id)
+        public async Task DeleteAsync(int id)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                connection.Execute("DELETE FROM Genres WHERE GenreId = @Id", new { Id = id });
+                await connection.ExecuteAsync("DELETE FROM Genres WHERE GenreId = @Id", new { Id = id });
             }
+        }
+        
+        public Task SaveChangesAsync()
+        {
+            // This is the "commit point" for operations performed using the shared _connection.
+            // It closes and disposes of the connection, making any changes persistent.
+            if (_connection != null && _connection.State == ConnectionState.Open)
+            {
+                _connection.Close();
+                _connection.Dispose();
+                _connection = null; // Clear the reference to the disposed connection
+            }
+            // Return a completed task since no asynchronous database operation is happening directly here.
+            return Task.CompletedTask;
         }
     }
 }

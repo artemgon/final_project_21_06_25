@@ -1,8 +1,10 @@
-﻿using ApplicationServices.Contracts;
-using BookLibrary.ApplicationServices.Contracts;
-using BookLibrary.DataAccess.Contracts;
+﻿using BookLibrary.ApplicationServices.Contracts;
+using BookLibrary.DataAccess.Contracts; // Assuming your repository interface is here
 using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using ApplicationServices.Contracts;
+using DataAccess.Contracts;
 
 namespace BookLibrary.ApplicationServices.Implementations
 {
@@ -15,29 +17,27 @@ namespace BookLibrary.ApplicationServices.Implementations
             _genreRepository = genreRepository;
         }
 
-        public IEnumerable<Genre> GetAllGenres()
+        public async Task<IEnumerable<Genre>> GetAllGenresAsync()
         {
-            return _genreRepository.GetAll();
+            return await _genreRepository.GetAllAsync(); // Ensure your repository method is also async
         }
 
-        public Genre GetGenreById(int id)
+        public async Task AddGenreAsync(Genre genre)
         {
-            return _genreRepository.GetById(id);
+            await _genreRepository.AddAsync(genre);
+            await _genreRepository.SaveChangesAsync(); // Commit changes to DB
         }
 
-        public int CreateGenre(Genre genre)
+        public async Task UpdateGenreAsync(Genre genre)
         {
-            return _genreRepository.Add(genre);
+            await _genreRepository.UpdateAsync(genre); // Assuming this marks the entity as modified
+            await _genreRepository.SaveChangesAsync();
         }
 
-        public void UpdateGenre(Genre genre)
+        public async Task DeleteGenreAsync(int genreId)
         {
-            _genreRepository.Update(genre);
-        }
-
-        public void DeleteGenre(int id)
-        {
-            _genreRepository.Delete(id);
+            await _genreRepository.DeleteAsync(genreId);
+            await _genreRepository.SaveChangesAsync();
         }
     }
 }

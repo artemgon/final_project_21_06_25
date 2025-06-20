@@ -1,7 +1,10 @@
-﻿using BookLibrary.ApplicationServices.Contracts;
-using BookLibrary.DataAccess.Contracts;
+﻿// BookLibrary.ApplicationServices.Implementations/WishlistService.cs
+using BookLibrary.ApplicationServices.Contracts;
+using BookLibrary.DataAccess.Contracts; // Assuming your repository interface is here
 using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using DataAccess.Contracts;
 
 namespace BookLibrary.ApplicationServices.Implementations
 {
@@ -14,29 +17,26 @@ namespace BookLibrary.ApplicationServices.Implementations
             _wishlistRepository = wishlistRepository;
         }
 
-        public IEnumerable<WishlistItem> GetAllWishlistItems()
+        public async Task<IEnumerable<WishlistItem>> GetAllWishlistItemsAsync()
         {
-            return _wishlistRepository.GetAll();
+            return await _wishlistRepository.GetAllAsync(); // Ensure repository method is async
         }
 
-        public WishlistItem GetWishlistItemById(int id)
+        public async Task AddWishlistItemAsync(WishlistItem wishlistItem)
         {
-            return _wishlistRepository.GetById(id);
+            // Ensure DateAdded is set before saving
+            if (wishlistItem.DateAdded == default)
+            {
+                wishlistItem.DateAdded = DateTime.UtcNow; // Or DateTime.Now, choose consistently
+            }
+            await _wishlistRepository.AddAsync(wishlistItem);
+            await _wishlistRepository.SaveChangesAsync();
         }
 
-        public int AddWishlistItem(WishlistItem item)
+        public async Task DeleteWishlistItemAsync(int wishlistItemId)
         {
-            return _wishlistRepository.Add(item);
-        }
-
-        public void UpdateWishlistItem(WishlistItem item)
-        {
-            _wishlistRepository.Update(item);
-        }
-
-        public void DeleteWishlistItem(int id)
-        {
-            _wishlistRepository.Delete(id);
+            await _wishlistRepository.DeleteAsync(wishlistItemId);
+            await _wishlistRepository.SaveChangesAsync();
         }
     }
 }

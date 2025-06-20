@@ -1,23 +1,26 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using BookLibrary.Domain.Entities;
 
 namespace BookLibrary.DataAccess.Contracts
 {
     public interface IBookRepository
     {
-        IEnumerable<Book> GetAll();
-        Book GetById(int id);
-        int Add(Book book);
-        void Update(Book book);
-        void Delete(int id);
-
-        void AddBookAuthor(int bookId, int authorId);
-        void RemoveBookAuthor(int bookId, int authorId);
-        IEnumerable<Author> GetAuthorsForBook(int bookId); 
-        void AddBookGenre(int bookId, int genreId);
-        void RemoveBookGenre(int bookId, int genreId);
-        IEnumerable<Genre> GetGenresForBook(int bookId);
-
-        IEnumerable<Book> SearchBooks(string searchTerm = null, string readingStatus = null, int? genreId = null);
+        Task<IEnumerable<Book>> GetAllAsync(); // Existing
+        public Task<IEnumerable<Book>> GetAllWithDetailsAsync();
+        public Task<Book> GetByIdAsync(int id);
+        Task<IEnumerable<Book>> SearchAsync(string searchTerm, string readingStatus, int? genreId); // Updated
+        public Task<Book> GetByIdWithDetailsAsync(int id); // New method to get book with details
+        Task<int> AddAsync(Book entity);
+        public Task UpdateAsync(Book book);
+        public Task DeleteAsync(int id);
+        public Task AddBookAuthorAsync(int bookId, int authorId);
+        public Task<IEnumerable<Author>> GetAuthorsForBookAsync(int bookId);
+        public Task RemoveBookAuthorAsync(int bookId, int authorId);
+        public Task AddBookGenreAsync(int bookId, int genreId);
+        public Task RemoveBookGenreAsync(int bookId, int genreId);
+        public Task<IEnumerable<Genre>> GetGenresForBookAsync(int bookId);
+        Task SaveChangesAsync();
     }
 }

@@ -1,14 +1,14 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BookLibrary.ApplicationServices.Contracts
 {
     public interface IWishlistService
     {
-        IEnumerable<WishlistItem> GetAllWishlistItems();
-        WishlistItem GetWishlistItemById(int id);
-        int AddWishlistItem(WishlistItem item);
-        void UpdateWishlistItem(WishlistItem item);
-        void DeleteWishlistItem(int id);
+        Task<IEnumerable<WishlistItem>> GetAllWishlistItemsAsync();
+        Task AddWishlistItemAsync(WishlistItem wishlistItem);
+        Task DeleteWishlistItemAsync(int wishlistItemId);
+        //Task<WishlistItem> GetWishlistItemByIdAsync(int id);
     }
 }

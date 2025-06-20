@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
   </ItemGroup>
 
@@ -31,6 +32,8 @@
 	  <Resource Include="Images\loading_circle.gif">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </Resource>
+	  <None Remove="Images\book_icon_158035.png" />
+	  <Resource Include="Images\book_icon_158035.png" />
 	</ItemGroup>
 
   <ItemGroup>

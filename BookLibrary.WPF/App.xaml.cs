@@ -2,7 +2,6 @@
 using BookLibrary.ApplicationServices.Implementations;
 using BookLibrary.DataAccess.Contracts;
 using DataAccess.Database;
-using BookLibrary.DataAccess.Implementations;
 using ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,9 +11,16 @@ using ApplicationServices.Contracts;
 using System;
 using System.Data;
 using System.Windows;
-using ApplicationServices.Implementations;
+using BookLibrary.ApplicationServices.Implementations;
+using BookLibrary.ViewModels;
+using BookLibrary.ViewModels.AuthorManagement;
+using BookLibrary.ViewModels.BookManagement;
+using BookLibrary.ViewModels.GenreManagement;
+using BookLibrary.ViewModels.WishlistManagement;
+using DataAccess.Implementations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Hosting;
 
 namespace BookLibrary.WPF
 {
@@ -22,9 +28,36 @@ namespace BookLibrary.WPF
     {
         private ServiceProvider _serviceProvider;
         private IConfiguration _configuration;
+        public static IHost AppHost { get; private set; }
 
         public App()
         {
+            AppHost = Host.CreateDefaultBuilder().ConfigureServices((hostContext, services) =>
+            {
+                services.AddTransient<IDbConnection>(sp =>
+                    new SqlConnection(hostContext.Configuration.GetConnectionString("BookLibraryDB")));
+                services.AddSingleton<DbConnectionFactory>(
+                    new DbConnectionFactory(hostContext.Configuration.GetConnectionString("BookLibraryDB")));
+
+                services.AddTransient<IBookRepository, BookRepository>();
+                services.AddTransient<IAuthorRepository, AuthorRepository>();
+                services.AddTransient<IGenreRepository, GenreRepository>();
+                services.AddTransient<IWishlistRepository, WishlistRepository>();
+
+                services.AddTransient<IBookService, BookService>();
+                services.AddTransient<IAuthorService, AuthorService>();
+                services.AddTransient<IGenreService, GenreService>();
+                services.AddTransient<IWishlistService, WishlistService>();
+
+                services.AddTransient<MainViewModel>();
+                services.AddTransient<BookListViewModel>();
+                services.AddTransient<BookDetailViewModel>(); 
+                services.AddTransient<AuthorManagerViewModel>(); 
+                services.AddTransient<GenreManagerViewModel>();  
+                services.AddTransient<WishlistManagerViewModel>();
+
+                services.AddSingleton<MainWindow>();
+            }).Build();
             _configuration = new ConfigurationBuilder()
                 .SetBasePath(System.IO.Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)

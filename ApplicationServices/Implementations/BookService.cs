@@ -1,107 +1,55 @@
-﻿using BookLibrary.ApplicationServices.Contracts;
+﻿// BookLibrary.ApplicationServices.Implementations/BookService.cs
+using BookLibrary.ApplicationServices.Contracts;
 using BookLibrary.DataAccess.Contracts;
-using BookLibrary.DataAccess.Implementations;
-using DataAccess.Contracts;
 using Domain.Entities;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace BookLibrary.ApplicationServices.Implementations
 {
     public class BookService : IBookService
     {
         private readonly IBookRepository _bookRepository;
-        private readonly IAuthorRepository _authorRepository;
-        private readonly IGenreRepository _genreRepository; 
 
-        public BookService(IBookRepository bookRepository, IAuthorRepository authorRepository, IGenreRepository genreRepository)
+        public BookService(IBookRepository bookRepository)
         {
             _bookRepository = bookRepository;
-            _authorRepository = authorRepository;
-            _genreRepository = genreRepository;
         }
 
-        public IEnumerable<Book> GetAllBooksWithDetails()
+        public async Task<IEnumerable<Book>> GetAllBooksWithDetailsAsync()
         {
-            var books = _bookRepository.GetAll().ToList();
-
-            foreach (var book in books)
-            {
-                book.Authors = _bookRepository.GetAuthorsForBook(book.BookId).ToList();
-                book.Genres = _bookRepository.GetGenresForBook(book.BookId).ToList();
-            }
-            return books;
+            // This method should load books including their Authors and Genres
+            return await _bookRepository.GetAllWithDetailsAsync(); // Assuming this method exists in your repo
         }
 
-        public Book GetBookDetails(int id)
+        public async Task<Book> GetBookDetailsAsync(int bookId)
         {
-            var book = _bookRepository.GetById(id);
-            if (book != null)
-            {
-                book.Authors = _bookRepository.GetAuthorsForBook(book.BookId).ToList();
-                book.Genres = _bookRepository.GetGenresForBook(book.BookId).ToList();
-            }
-            return book;
+            // This should load a single book including its Authors and Genres
+            return await _bookRepository.GetByIdWithDetailsAsync(bookId);
         }
 
-        public int CreateBook(Book book, IEnumerable<int> authorIds, IEnumerable<int> genreIds)
+        public async Task<IEnumerable<Book>> SearchBooksAsync(string searchTerm, string readingStatus, int? genreId)
         {
-            int newBookId = _bookRepository.Add(book);
-
-            foreach (int authorId in authorIds)
-            {
-                _bookRepository.AddBookAuthor(newBookId, authorId);
-            }
-
-            foreach (int genreId in genreIds)
-            {
-                _bookRepository.AddBookGenre(newBookId, genreId);
-            }
-
-            return newBookId;
+            return await _bookRepository.SearchAsync(searchTerm, readingStatus, genreId);
         }
 
-        public void UpdateBook(Book book, IEnumerable<int> authorIds, IEnumerable<int> genreIds)
+        public async Task AddBookAsync(Book book)
         {
-            _bookRepository.Update(book);
-
-            foreach (var author in _bookRepository.GetAuthorsForBook(book.BookId))
-            {
-                _bookRepository.RemoveBookAuthor(book.BookId, author.AuthorId);
-            }
-
-            foreach (int authorId in authorIds)
-            {
-                _bookRepository.AddBookAuthor(book.BookId, authorId);
-            }
-
-            foreach (var genre in _bookRepository.GetGenresForBook(book.BookId))
-            {
-                _bookRepository.RemoveBookGenre(book.BookId, genre.GenreId);
-            }
-
-            foreach (int genreId in genreIds)
-            {
-                _bookRepository.AddBookGenre(book.BookId, genreId);
-            }
+            await _bookRepository.AddAsync(book);
+            await _bookRepository.SaveChangesAsync();
         }
 
-        public void DeleteBook(int id)
+        public async Task UpdateBookAsync(Book book)
         {
-            _bookRepository.Delete(id);
+            await _bookRepository.UpdateAsync(book);
+            await _bookRepository.SaveChangesAsync();
         }
 
-        public IEnumerable<Book> SearchBooks(string searchTerm = null, string readingStatus = null, int? genreId = null)
+        public async Task DeleteBookAsync(int bookId)
         {
-            var books = _bookRepository.SearchBooks(searchTerm, readingStatus, genreId).ToList();
-
-            foreach (var book in books)
-            {
-                book.Authors = _bookRepository.GetAuthorsForBook(book.BookId).ToList();
-                book.Genres = _bookRepository.GetGenresForBook(book.BookId).ToList();
-            }
-
-            return books;
+            await _bookRepository.DeleteAsync(bookId);
+            await _bookRepository.SaveChangesAsync();
         }
     }
 }

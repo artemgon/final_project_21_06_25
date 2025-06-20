@@ -1,44 +1,104 @@
-﻿<UserControl x:Class="BookLibrary.WPF.Views.BookListView"
+﻿<!-- BookLibrary.WPF/Views/BookListView.xaml -->
+<UserControl x:Class="BookLibrary.WPF.Views.BookListView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
-             xmlns:converters="clr-namespace:ViewModels.Converters;assembly=ViewModels"
+             xmlns:viewmodels="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=BookLibrary.ViewModels"
+             xmlns:converters="clr-namespace:ViewModels.Converters;assembly=BookLibrary.ViewModels"
+             xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=ViewModels"
+             xmlns:converters1="clr-namespace:ViewModels.Converters;assembly=ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance viewModels:BookListViewModel, IsDesignTimeCreatable=True}"
+             d:DataContext="{d:DesignInstance bookManagement:BookListViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="450" d:DesignWidth="800">
-    
+
     <UserControl.Resources>
-        <converters:AuthorsToStringConverter x:Key="AuthorsConverter"/>
+        <!-- Reusing the AuthorsToStringConverter -->
+        <converters1:AuthorsToStringConverter x:Key="AuthorsConverter"/>
+        <!-- Reusing the BooleanToVisibilityConverter -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <!-- Reusing SmallSortButton style - ensure this style is either defined globally (e.g., App.xaml)
+             or is available here. If you prefer global, remove this style definition and add it to App.xaml. -->
+        <Style x:Key="SmallSortButton" TargetType="Button">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#D0D0D0"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#C0C0C0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
-    
+
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Search/Filter -->
+            <RowDefinition Height="Auto"/> <!-- Sorting Buttons -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Action Buttons -->
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10" HorizontalAlignment="Center">
+        <!-- Header: Renamed to Manage Books -->
+        <TextBlock Grid.Row="0" Text="Manage Books" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="10"/>
+
+        <!-- Search and Filter Section -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="10" HorizontalAlignment="Center">
             <TextBlock Text="Search Term:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <TextBox Width="150" Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+            <TextBox Width="150" Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"
+                     ToolTip="Search by Title, Author, ISBN, or Summary"/>
 
             <TextBlock Text="Reading Status:" VerticalAlignment="Center" Margin="0,0,5,0"/>
             <ComboBox Width="120" ItemsSource="{Binding ReadingStatuses}" SelectedItem="{Binding SelectedReadingStatusFilter}" Margin="0,0,10,0"/>
 
-            <Button Content="Search" Command="{Binding SearchCommand}" Padding="10,5"/>
+            <!-- Genre Filter: Binds to AvailableGenres and SelectedGenreFilter -->
+            <TextBlock Text="Genre:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <ComboBox Width="120" ItemsSource="{Binding AvailableGenres}" DisplayMemberPath="GenreName" SelectedItem="{Binding SelectedGenreFilter}" Margin="0,0,10,0"/>
+
+            <Button Content="Search" Command="{Binding SearchCommand}" Padding="10,5"
+                    ToolTip="Apply search term, reading status, and genre filters"/>
         </StackPanel>
 
-        <DataGrid Grid.Row="1"
+        <!-- Sorting Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+            <TextBlock Text="Sort By:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Button Content="Title" Command="{Binding SortByTitleCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
+            <Button Content="Author" Command="{Binding SortByAuthorCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
+            <Button Content="Status" Command="{Binding SortByReadingStatusCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
+            <Button Content="Rating" Command="{Binding SortByRatingCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
+            <Button Content="Pages" Command="{Binding SortByPageCountCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
+            <Button Content="Year" Command="{Binding SortByPublicationYearCommand}" Style="{StaticResource SmallSortButton}"/>
+        </StackPanel>
+
+        <!-- Book List DataGrid -->
+        <DataGrid Grid.Row="3"
                   ItemsSource="{Binding Books}"
                   SelectedItem="{Binding SelectedBook}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   Margin="10"
-                  HeadersVisibility="Column">
+                  HeadersVisibility="Column"
+                  SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="2*"/>
+                <!-- Binding Authors to the converter to display as a comma-separated string -->
                 <DataGridTextColumn Header="Authors" Binding="{Binding Authors, Converter={StaticResource AuthorsConverter}}" Width="1.5*"/>
                 <DataGridTextColumn Header="Reading Status" Binding="{Binding ReadingStatus}" Width="*"/>
                 <DataGridTextColumn Header="Rating" Binding="{Binding Rating}" Width="0.5*"/>
@@ -47,10 +107,25 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
-            <Button Content="Add New" Command="{Binding AddBookCommand}" Padding="15,8" Margin="0,0,10,0"/>
-            <Button Content="Edit Selected" Command="{Binding EditBookCommand}" Padding="15,8" Margin="0,0,10,0"/>
-            <Button Content="Delete Selected" Command="{Binding DeleteBookCommand}" Padding="15,8"/>
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Add New" Command="{Binding AddBookCommand}" Padding="15,8" Margin="0,0,10,0"
+                    ToolTip="Create a new book record"/>
+            <Button Content="Edit Selected" Command="{Binding EditBookCommand}" Padding="15,8" Margin="0,0,10,0"
+                    IsEnabled="{Binding EditBookCommand}"  /><!-- REMOVED .CanExecute -->
+            <Button Content="Delete Selected" Command="{Binding DeleteBookCommand}" Padding="15,8" Margin="0,0,10,0"
+                    IsEnabled="{Binding DeleteBookCommand}" /><!-- REMOVED .CanExecute -->
+            <Button Content="Add to Wishlist" Command="{Binding AddToWishlistCommand}" Padding="15,8"
+                    IsEnabled="{Binding AddToWishlistCommand}"/><!-- REMOVED .CanExecute -->
         </StackPanel>
+
+        <!-- Loading Overlay -->
+        <Border Grid.RowSpan="5" Background="#AAFFFFFF"
+                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <ProgressBar IsIndeterminate="True"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Width="100" Height="100"/>
+        </Border>
     </Grid>
 </UserControl>

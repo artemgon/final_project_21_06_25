@@ -1,38 +1,42 @@
 ﻿using Dapper;
-using DataAccess.Contracts;
+using BookLibrary.DataAccess.Contracts; // fixed namespace
 using DataAccess.Database;
 using Domain.Entities;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using BookLibrary.Domain.Entities;
+using DataAccess.Contracts;
 
-namespace BookLibrary.DataAccess.Implementations
+namespace DataAccess.Implementations
 {
     public class AuthorRepository : IAuthorRepository
     {
         private readonly DbConnectionFactory _connectionFactory;
+        private IDbConnection _connection;
 
         public AuthorRepository(DbConnectionFactory connectionFactory)
         {
             _connectionFactory = connectionFactory;
         }
 
-        public IEnumerable<Author> GetAll()
+        public async Task<IEnumerable<Author>> GetAllAsync()
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.Query<Author>("SELECT * FROM Authors ORDER BY LastName, FirstName").ToList();
+                return await connection.QueryAsync<Author>("SELECT * FROM Authors ORDER BY LastName, FirstName");
             }
         }
 
-        public Author GetById(int id)
+        public async Task<Author> GetByIdAsync(int id) // Changed return type to Task<Author> and added 'async'
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                return connection.QuerySingleOrDefault<Author>("SELECT * FROM Authors WHERE AuthorId = @Id", new { Id = id });
+                return await connection.QuerySingleOrDefaultAsync<Author>("SELECT * FROM Authors WHERE AuthorId = @Id", new { Id = id });
             }
         }
 
-        public int Add(Author author)
+        public async Task<int> AddAsync(Author author)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
@@ -40,11 +44,11 @@ namespace BookLibrary.DataAccess.Implementations
                     INSERT INTO Authors (FirstName, LastName, Biography)
                     VALUES (@FirstName, @LastName, @Biography);
                     SELECT CAST(SCOPE_IDENTITY() as int)";
-                return connection.ExecuteScalar<int>(sql, author);
+                return await connection.ExecuteScalarAsync<int>(sql, author);
             }
         }
 
-        public void Update(Author author)
+        public async Task UpdateAsync(Author author)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
@@ -54,16 +58,29 @@ namespace BookLibrary.DataAccess.Implementations
                         LastName = @LastName,
                         Biography = @Biography
                     WHERE AuthorId = @AuthorId";
-                connection.Execute(sql, author);
+                await connection.ExecuteAsync(sql, author);
             }
         }
 
-        public void Delete(int id)
+        public async Task DeleteAsync(int id)
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                connection.Execute("DELETE FROM Authors WHERE AuthorId = @Id", new { Id = id });
+                await connection.ExecuteAsync("DELETE FROM Authors WHERE AuthorId = @Id", new { Id = id });
             }
+        }
+        
+        public Task SaveChangesAsync()
+        {
+            // This assumes _connection was opened by other methods in this repository
+            // and should be closed/disposed when SaveChangesAsync is called.
+            if (_connection != null && _connection.State == ConnectionState.Open)
+            {
+                _connection.Close();
+                _connection.Dispose();
+                _connection = null; // Reset for next unit of work
+            }
+            return Task.CompletedTask; // Since no async DB operation is performed directly here
         }
     }
 }

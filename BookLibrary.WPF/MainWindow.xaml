@@ -5,8 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
         xmlns:views="clr-namespace:BookLibrary.WPF.Views"
+        xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=ViewModels"
+        xmlns:authorManagement="clr-namespace:BookLibrary.ViewModels.AuthorManagement;assembly=ViewModels"
+        xmlns:genreManagement="clr-namespace:BookLibrary.ViewModels.GenreManagement;assembly=ViewModels"
+        xmlns:wishlistManagement="clr-namespace:BookLibrary.ViewModels.WishlistManagement;assembly=ViewModels"
         mc:Ignorable="d"
-        Title="Book Library Application" Height="700" Width="1000">
+        Title="Book Library Application" Height="700" Width="1000"
+        Icon="/../Images/book_icon_158035.png">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Background" Value="#555555"/>
@@ -36,23 +41,23 @@
         </Style>
         
         <!-- DataTemplates for View-ViewModel Mapping -->
-        <DataTemplate DataType="{x:Type viewModels:BookListViewModel}">
+        <DataTemplate DataType="{x:Type bookManagement:BookListViewModel}">
             <views:BookListView />
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type viewModels:BookDetailViewModel}">
+        <DataTemplate DataType="{x:Type bookManagement:BookDetailViewModel}">
             <views:BookDetailView />
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type viewModels:AuthorManagerViewModel}">
+        <DataTemplate DataType="{x:Type authorManagement:AuthorManagerViewModel}">
             <views:AuthorManagerView />
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type viewModels:GenreManagerViewModel}">
+        <DataTemplate DataType="{x:Type genreManagement:GenreManagerViewModel}">
             <views:GenreManagerView />
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type viewModels:WishlistManagerViewModel}">
+        <DataTemplate DataType="{x:Type wishlistManagement:WishlistManagerViewModel}">
             <views:WishlistManagerView />
         </DataTemplate>
     </Window.Resources>
@@ -64,8 +69,8 @@
 
         <StackPanel Grid.Column="0" Background="#333333" Margin="5">
             <TextBlock Text="Navigation" Foreground="White" FontSize="20" HorizontalAlignment="Center" Margin="10"/>
-            <Button Content="Book List" Command="{Binding NavigateToBookListCommand}" Style="{StaticResource NavButton}" Margin="5"/>
-            <Button Content="Add New Book" Command="{Binding NavigateToAddBookCommand}" Style="{StaticResource NavButton}" Margin="5"/>
+            <Button Content="Manage Books" Command="{Binding NavigateToBookListCommand}" Style="{StaticResource NavButton}" Margin="5"/>
+            <Button Content="Create/Edit Book" Command="{Binding NavigateToAddBookCommand}" Style="{StaticResource NavButton}" Margin="5"/>
             <Button Content="Manage Authors" Command="{Binding NavigateToAuthorManagerCommand}" Style="{StaticResource NavButton}" Margin="5"/>
             <Button Content="Manage Genres" Command="{Binding NavigateToGenreManagerCommand}" Style="{StaticResource NavButton}" Margin="5"/>
             <Button Content="Wishlist" Command="{Binding NavigateToWishlistManagerCommand}" Style="{StaticResource NavButton}" Margin="5"/>

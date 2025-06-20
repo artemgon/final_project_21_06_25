@@ -1,66 +1,46 @@
-﻿using ApplicationServices.Contracts;
+﻿// BookLibrary.ApplicationServices.Implementations/AuthorService.cs
 using BookLibrary.ApplicationServices.Contracts;
-using BookLibrary.DataAccess.Contracts;
-using DataAccess.Contracts;
+using BookLibrary.DataAccess.Contracts; // Assuming your repository interface is here
 using Domain.Entities;
-using Dapper;
-using System.Data;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
+using ApplicationServices.Contracts;
+using BookLibrary.Domain.Entities;
+using DataAccess.Contracts;
 
-namespace ApplicationServices.Implementations
+namespace BookLibrary.ApplicationServices.Implementations
 {
     public class AuthorService : IAuthorService
     {
         private readonly IAuthorRepository _authorRepository;
 
-        private readonly IDbConnection _dbConnection;
-        
-        public AuthorService(IAuthorRepository authorRepository, IDbConnection dbConnection)
+        public AuthorService(IAuthorRepository authorRepository)
         {
             _authorRepository = authorRepository;
-            _dbConnection = dbConnection;
         }
 
-        public IEnumerable<Author> GetAllAuthors()
+        public async Task<IEnumerable<Author>> GetAllAuthorsAsync()
         {
-            var sql = "SELECT * FROM Authors";
-            return _dbConnection.Query<Author>(sql);
+            return await _authorRepository.GetAllAsync(); // Ensure your repository method is also async
         }
 
-        public Author GetAuthorById(int id)
+        public async Task AddAuthorAsync(Author author)
         {
-            var sql = "SELECT * FROM Authors WHERE AuthorId = @AuthorId";
-            return _dbConnection.Query<Author>(sql, new { AuthorId = id }).SingleOrDefault();
+            await _authorRepository.AddAsync(author);
+            await _authorRepository.SaveChangesAsync(); // Commit changes to DB
         }
 
-        public int CreateAuthor(Author author)
+        public async Task UpdateAuthorAsync(Author author)
         {
-            var sql = "INSERT INTO Authors (FirstName, LastName, Biography) VALUES (@FirstName, @LastName, @Biography); SELECT CAST(SCOPE_IDENTITY() as int);";
-            return _dbConnection.Query<int>(sql, new
-            {
-                author.FirstName,
-                author.LastName,
-                author.Biography
-            }).Single();
+            await _authorRepository.UpdateAsync(author); // Assuming this marks the entity as modified
+            await _authorRepository.SaveChangesAsync();
         }
 
-        public void UpdateAuthor(Author author)
+        public async Task DeleteAuthorAsync(int authorId)
         {
-            var sql = "UPDATE Authors SET FirstName = @FirstName, LastName = @LastName, Biography = @Biography WHERE AuthorId = @AuthorId";
-            _dbConnection.Execute(sql, new
-            {
-                author.FirstName,
-                author.LastName,
-                author.Biography,
-                AuthorId = author.AuthorId
-            });
-        }
-
-        public void DeleteAuthor(int id)
-        {
-            var sql = "DELETE FROM Authors WHERE AuthorId = @AuthorId";
-            _dbConnection.Execute(sql, new { AuthorId = id });
+            // Implement retrieval and deletion, or direct delete if supported by repository
+            await _authorRepository.DeleteAsync(authorId);
+            await _authorRepository.SaveChangesAsync();
         }
     }
 }

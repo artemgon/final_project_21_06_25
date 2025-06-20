@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace  ViewModels
 {
-    public abstract class ViewModelBase : INotifyPropertyChanged
+    public abstract partial class ViewModelBase : ObservableObject
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
