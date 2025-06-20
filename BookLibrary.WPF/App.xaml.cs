@@ -9,6 +9,12 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 using DataAccess.Contracts;
 using ApplicationServices.Contracts;
+using System;
+using System.Data;
+using System.Windows;
+using ApplicationServices.Implementations;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.SqlClient;
 
 namespace BookLibrary.WPF
 {
@@ -31,6 +37,8 @@ namespace BookLibrary.WPF
 
         private void ConfigureServices(IServiceCollection services)
         {
+            services.AddTransient<IDbConnection>(sp =>
+                new SqlConnection(_configuration.GetConnectionString("BookLibraryDB")));
             services.AddSingleton<DbConnectionFactory>(
                 new DbConnectionFactory(_configuration.GetConnectionString("BookLibraryDB")));
 
@@ -59,7 +67,11 @@ namespace BookLibrary.WPF
             base.OnStartup(e);
 
             var mainWindow = _serviceProvider.GetService<MainWindow>();
-
+            var mainViewModel = _serviceProvider.GetService<MainViewModel>();
+            
+            // Set the MainViewModel as the DataContext for the MainWindow
+            mainWindow.DataContext = mainViewModel;
+            
             mainWindow.Show();
         }
     }

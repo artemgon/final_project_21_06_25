@@ -4,9 +4,94 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:BookLibrary.WPF.Views"
+             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance viewModels:AuthorManagerViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" 
+                   Text="Author Management" 
+                   FontSize="20" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,15" 
+                   HorizontalAlignment="Center"/>
+        
+        <!-- Authors List -->
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Authors}"
+                  SelectedItem="{Binding SelectedAuthor}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  SelectionMode="Single"
+                  Margin="0,0,0,10">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Author ID" Binding="{Binding AuthorId}" Width="80"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                <DataGridTextColumn Header="Biography" Binding="{Binding Biography}" Width="2*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        
+        <!-- Author Details Panel -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Author Name -->
+            <TextBlock Grid.Row="0" Grid.Column="0" 
+                       Text="Name:" 
+                       FontWeight="SemiBold" 
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <TextBox Grid.Row="0" Grid.Column="1" 
+                     Text="{Binding SelectedAuthor.Name, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,5"/>
+
+            <!-- Author Biography -->
+            <TextBlock Grid.Row="1" Grid.Column="0" 
+                       Text="Biography:" 
+                       FontWeight="SemiBold" 
+                       VerticalAlignment="Top"
+                       Margin="0,8,10,0"/>
+            <TextBox Grid.Row="1" Grid.Column="1" 
+                     Text="{Binding SelectedAuthor.Biography, UpdateSourceTrigger=PropertyChanged}" 
+                     TextWrapping="Wrap" 
+                     AcceptsReturn="True" 
+                     Height="80" 
+                     Margin="0,5"/>
+
+            <!-- Control Buttons -->
+            <StackPanel Grid.Row="2" Grid.Column="1" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right" 
+                        Margin="0,10,0,0">
+                <Button Content="Save" 
+                        Command="{Binding SaveAuthorCommand}" 
+                        Width="80" 
+                        Margin="0,0,10,0"/>
+                <Button Content="Delete" 
+                        Command="{Binding DeleteAuthorCommand}" 
+                        Width="80"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

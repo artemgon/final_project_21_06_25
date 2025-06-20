@@ -1,6 +1,7 @@
 ﻿using BookLibrary.ApplicationServices.Contracts;
-using Domain.Entities;
+using ViewModels;
 using System.Collections.ObjectModel;
+using Domain.Entities;
 using System.Windows; // For MessageBox (for temporary messages)
 
 namespace ViewModels

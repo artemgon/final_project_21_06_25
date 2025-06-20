@@ -7,6 +7,10 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
+	
+	<ItemGroup>
+	  <None Remove="Images\loading_circle.gif" />
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -21,6 +25,12 @@
 		<ProjectReference Include="..\ViewModels\ViewModels.csproj" />
 		<ProjectReference Include="..\ApplicationServices\ApplicationServices.csproj" />
 
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Images\loading_circle.gif">
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+	  </Resource>
 	</ItemGroup>
 
   <ItemGroup>

@@ -1,16 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace BookLibrary.WPF.Views
 {
@@ -19,9 +8,39 @@ namespace BookLibrary.WPF.Views
     /// </summary>
     public partial class CustomConfirmationDialog : Window
     {
+        public bool Result { get; private set; }
+
         public CustomConfirmationDialog()
         {
             InitializeComponent();
+            Result = false;
+        }
+
+        public CustomConfirmationDialog(string message) : this()
+        {
+            MessageText.Text = message;
+        }
+
+        public static bool Show(Window owner, string message)
+        {
+            var dialog = new CustomConfirmationDialog(message)
+            {
+                Owner = owner
+            };
+            dialog.ShowDialog();
+            return dialog.Result;
+        }
+
+        private void YesButton_Click(object sender, RoutedEventArgs e)
+        {
+            Result = true;
+            Close();
+        }
+
+        private void NoButton_Click(object sender, RoutedEventArgs e)
+        {
+            Result = false;
+            Close();
         }
     }
 }

@@ -5,8 +5,46 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BookLibrary.WPF.Views"
         mc:Ignorable="d"
-        Title="CustomConfirmationDialog" Height="450" Width="800">
-    <Grid>
+        Title="Confirmation" Height="200" Width="400" 
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Width" Value="80"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="10"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
         
+        <!-- Message Text -->
+        <TextBlock x:Name="MessageText" 
+                   Grid.Row="0" 
+                   Text="Are you sure you want to proceed?" 
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   FontSize="16"/>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center">
+            <Button x:Name="YesButton" 
+                    Content="Yes" 
+                    Click="YesButton_Click"
+                    IsDefault="True"/>
+            <Button x:Name="NoButton" 
+                    Content="No" 
+                    Click="NoButton_Click"
+                    IsCancel="True"/>
+        </StackPanel>
     </Grid>
 </Window>

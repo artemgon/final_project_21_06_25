@@ -4,9 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
+        xmlns:views="clr-namespace:BookLibrary.WPF.Views"
         mc:Ignorable="d"
-        Title="Book Library Application" Height="700" Width="1000"
-        DataContext="{DesignInstance viewModels:MainViewModel, IsDesignTimeCreatable=True}">
+        Title="Book Library Application" Height="700" Width="1000">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Background" Value="#555555"/>
@@ -34,6 +34,27 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <!-- DataTemplates for View-ViewModel Mapping -->
+        <DataTemplate DataType="{x:Type viewModels:BookListViewModel}">
+            <views:BookListView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewModels:BookDetailViewModel}">
+            <views:BookDetailView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewModels:AuthorManagerViewModel}">
+            <views:AuthorManagerView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewModels:GenreManagerViewModel}">
+            <views:GenreManagerView />
+        </DataTemplate>
+        
+        <DataTemplate DataType="{x:Type viewModels:WishlistManagerViewModel}">
+            <views:WishlistManagerView />
+        </DataTemplate>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>

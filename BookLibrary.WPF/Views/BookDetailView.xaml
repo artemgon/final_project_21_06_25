@@ -4,9 +4,152 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:BookLibrary.WPF.Views"
+             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
+             d:DesignHeight="650" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="FieldLabel">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,5,10,5" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Margin" Value="0,5,0,5" />
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid Margin="15">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="250" />
+        </Grid.ColumnDefinitions>
+        
+        <!-- Main Book Details -->
+        <ScrollViewer Grid.Column="0">
+            <StackPanel>
+                <TextBlock Text="Book Details" FontSize="20" FontWeight="Bold" Margin="0,0,0,15" />
+
+                <!-- Title -->
+                <DockPanel>
+                    <TextBlock Text="Title:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <TextBox Text="{Binding CurrentBook.Title, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+
+                <!-- ISBN -->
+                <DockPanel>
+                    <TextBlock Text="ISBN:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <TextBox Text="{Binding CurrentBook.ISBN, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+
+                <!-- Publication Year -->
+                <DockPanel>
+                    <TextBlock Text="Year:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <TextBox Text="{Binding CurrentBook.PublicationYear, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" />
+                </DockPanel>
+
+                <!-- Page Count -->
+                <DockPanel>
+                    <TextBlock Text="Pages:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <TextBox Text="{Binding CurrentBook.PageCount, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalAlignment="Left" />
+                </DockPanel>
+                
+                <!-- Reading Status -->
+                <DockPanel>
+                    <TextBlock Text="Status:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <ComboBox Width="150" HorizontalAlignment="Left" Margin="0,5,0,5"
+                              SelectedItem="{Binding CurrentBook.ReadingStatus}">
+                        <ComboBoxItem Content="Not Started" />
+                        <ComboBoxItem Content="In Progress" />
+                        <ComboBoxItem Content="Completed" />
+                        <ComboBoxItem Content="On Hold" />
+                    </ComboBox>
+                </DockPanel>
+
+                <!-- Rating -->
+                <DockPanel>
+                    <TextBlock Text="Rating:" Style="{StaticResource FieldLabel}" Width="100" />
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox Width="50" Margin="0,5,0,5"
+                                  SelectedItem="{Binding CurrentBook.Rating}">
+                            <ComboBoxItem Content="" />
+                            <ComboBoxItem Content="1" />
+                            <ComboBoxItem Content="2" />
+                            <ComboBoxItem Content="3" />
+                            <ComboBoxItem Content="4" />
+                            <ComboBoxItem Content="5" />
+                        </ComboBox>
+                        <TextBlock Text="/5" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Authors -->
+                <DockPanel>
+                    <TextBlock Text="Authors:" Style="{StaticResource FieldLabel}" Width="100" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <ListBox Grid.Row="0" Height="80" ItemsSource="{Binding CurrentBook.Authors}"
+                                 DisplayMemberPath="Name" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,5">
+                            <Button Content="Add" Width="60" Margin="0,0,5,0"/>
+                            <Button Content="Remove" Width="60"/>
+                        </StackPanel>
+                    </Grid>
+                </DockPanel>
+
+                <!-- Genres -->
+                <DockPanel>
+                    <TextBlock Text="Genres:" Style="{StaticResource FieldLabel}" Width="100" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <ListBox Grid.Row="0" Height="80" ItemsSource="{Binding CurrentBook.Genres}"
+                                 DisplayMemberPath="Name" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,5">
+                            <Button Content="Add" Width="60" Margin="0,0,5,0"/>
+                            <Button Content="Remove" Width="60"/>
+                        </StackPanel>
+                    </Grid>
+                </DockPanel>
+
+                <!-- Summary -->
+                <DockPanel>
+                    <TextBlock Text="Summary:" Style="{StaticResource FieldLabel}" Width="100" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                    <TextBox Text="{Binding CurrentBook.Summary, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" AcceptsReturn="True" Height="80" />
+                </DockPanel>
+
+                <!-- Notes -->
+                <DockPanel>
+                    <TextBlock Text="Notes:" Style="{StaticResource FieldLabel}" Width="100" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                    <TextBox Text="{Binding CurrentBook.Notes, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" AcceptsReturn="True" Height="80" />
+                </DockPanel>
+
+                <!-- Buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                    <Button Content="Save" Width="80" Margin="0,0,10,0" Command="{Binding SaveCommand}" />
+                    <Button Content="Cancel" Width="80" Command="{Binding CancelCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Cover Image Panel -->
+        <StackPanel Grid.Column="1" Margin="15,0,0,0">
+            <Border BorderBrush="LightGray" BorderThickness="1" Width="200" Height="280" HorizontalAlignment="Center">
+                <Image Source="{Binding CurrentBook.CoverImagePath, TargetNullValue='../Images/fff&amp;text=No+image+available.png'}" 
+                       Stretch="Uniform" />
+            </Border>
+            <Button Content="Change Cover Image" Margin="0,10,0,0" Width="150" HorizontalAlignment="Center" Command="{Binding ChangeCoverImageCommand}" />
+        </StackPanel>
     </Grid>
 </UserControl>
