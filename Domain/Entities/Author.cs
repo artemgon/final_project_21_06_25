@@ -1,20 +1,18 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel; // For ObservableObject and ObservableProperty
+﻿using CommunityToolkit.Mvvm.ComponentModel; // IMPORTANT: Add this using statement
 
 namespace BookLibrary.Domain.Entities
 {
-    // Author should ideally be ObservableObject if its properties are directly bound and edited
-    // and you want CanExecute to react to those live changes.
-    public partial class Author : ObservableObject // Make it partial and inherit ObservableObject
+    public partial class Author : ObservableObject // IMPORTANT: Inherit from ObservableObject
     {
-        public int AuthorId { get; set; }
+        public int AuthorId { get; set; } // No ObservableProperty needed for ID
 
-        [ObservableProperty] // Use ObservableProperty for auto-generated property changed
+        [ObservableProperty] // IMPORTANT: Add this attribute
         private string firstName;
 
-        [ObservableProperty] // Use ObservableProperty for auto-generated property changed
+        [ObservableProperty] // IMPORTANT: Add this attribute
         private string lastName;
 
-        [ObservableProperty] // Use ObservableProperty for auto-generated property changed
+        [ObservableProperty] // IMPORTANT: Add this attribute
         private string biography;
     }
 }

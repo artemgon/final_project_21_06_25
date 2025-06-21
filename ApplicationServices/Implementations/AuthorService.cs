@@ -1,11 +1,10 @@
 ﻿// BookLibrary.ApplicationServices.Implementations/AuthorService.cs
 using BookLibrary.ApplicationServices.Contracts;
 using BookLibrary.DataAccess.Contracts; // Assuming your repository interface is here
-using Domain.Entities;
+using BookLibrary.Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ApplicationServices.Contracts;
-using BookLibrary.Domain.Entities;
 using DataAccess.Contracts;
 
 namespace BookLibrary.ApplicationServices.Implementations
