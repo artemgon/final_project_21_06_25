@@ -7,12 +7,12 @@ namespace BookLibrary.Domain.Entities
         public int AuthorId { get; set; } // No ObservableProperty needed for ID
 
         [ObservableProperty] // IMPORTANT: Add this attribute
-        private string firstName;
+        private string firstName = string.Empty;
 
         [ObservableProperty] // IMPORTANT: Add this attribute
-        private string lastName;
+        private string lastName = string.Empty;
 
         [ObservableProperty] // IMPORTANT: Add this attribute
-        private string biography;
+        private string biography = string.Empty;
     }
 }

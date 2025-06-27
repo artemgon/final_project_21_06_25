@@ -20,13 +20,43 @@ namespace BookLibrary.ApplicationServices.Implementations
 
         public async Task<IEnumerable<Author>> GetAllAuthorsAsync()
         {
-            return await _authorRepository.GetAllAsync(); // Ensure your repository method is also async
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("AuthorService.GetAllAuthorsAsync: Starting...");
+                var authors = await _authorRepository.GetAllAsync();
+                var authorsList = authors?.ToList() ?? new List<Author>();
+                System.Diagnostics.Debug.WriteLine($"AuthorService.GetAllAuthorsAsync: Retrieved {authorsList.Count} authors from repository");
+                
+                foreach (var author in authorsList)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Author: ID={author.AuthorId}, Name={author.FirstName} {author.LastName}");
+                }
+                
+                return authorsList;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AuthorService.GetAllAuthorsAsync ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public async Task AddAuthorAsync(Author author)
         {
-            await _authorRepository.AddAsync(author);
-            await _authorRepository.SaveChangesAsync(); // Commit changes to DB
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"AuthorService.AddAuthorAsync: Adding author {author.FirstName} {author.LastName}");
+                var newId = await _authorRepository.AddAsync(author);
+                System.Diagnostics.Debug.WriteLine($"AuthorService.AddAuthorAsync: New author ID = {newId}");
+                await _authorRepository.SaveChangesAsync(); // Commit changes to DB
+                System.Diagnostics.Debug.WriteLine("AuthorService.AddAuthorAsync: Changes saved to database");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AuthorService.AddAuthorAsync ERROR: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task UpdateAuthorAsync(Author author)

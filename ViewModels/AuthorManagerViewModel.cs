@@ -74,8 +74,25 @@ namespace BookLibrary.ViewModels.AuthorManagement
                 // When CanSaveAuthor changes, no need to do anything as the UI will update via binding
             };
             
-            // Initial data load
-            _ = LoadAuthorsAsync();
+            // Force initial data load when ViewModel is created
+            System.Diagnostics.Debug.WriteLine("AuthorManagerViewModel constructor: Starting initial load");
+            _ = InitializeAsync();
+        }
+
+        // Separate initialization method to handle async loading properly
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("InitializeAsync: Loading authors...");
+                await LoadAuthorsAsync();
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync: Loaded {Authors.Count} authors");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"InitializeAsync error: {ex.Message}");
+                MessageBox.Show($"Error loading initial data: {ex.Message}", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         // --- CommunityToolkit.Mvvm Generated Partial Methods ---
@@ -126,7 +143,9 @@ namespace BookLibrary.ViewModels.AuthorManagement
 
         private bool CanAddAuthor()
         {
-            return !string.IsNullOrWhiteSpace(NewAuthorFirstName) && !string.IsNullOrWhiteSpace(NewAuthorLastName);
+            return !string.IsNullOrWhiteSpace(NewAuthorFirstName) && 
+                   !string.IsNullOrWhiteSpace(NewAuthorLastName) &&
+                   !string.IsNullOrWhiteSpace(NewAuthorBiography);
         }
 
         private bool CanSaveAuthorFunc()
@@ -148,27 +167,71 @@ namespace BookLibrary.ViewModels.AuthorManagement
         [RelayCommand] // Generates public AsyncRelayCommand LoadAuthorsCommand { get; }
         private async Task LoadAuthorsAsync()
         {
-            IsLoading = true;
             try
             {
-                var loadedAuthors = await _authorService.GetAllAuthorsAsync();
-                Authors.Clear();
-                foreach (var author in loadedAuthors)
+                System.Diagnostics.Debug.WriteLine("LoadAuthorsAsync: Starting to load authors from database...");
+                
+                // Set loading state on UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Authors.Add(author);
-                }
-                SortAuthors(currentSortProperty, false);
+                    IsLoading = true;
+                });
+                
+                // Execute database query (this works since TestDatabaseConnectionAsync works)
+                var loadedAuthors = await _authorService.GetAllAuthorsAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync: Retrieved {loadedAuthors?.Count() ?? 0} authors from service");
+                
+                // Update UI on the UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    Authors.Clear();
+                    
+                    if (loadedAuthors != null)
+                    {
+                        foreach (var author in loadedAuthors)
+                        {
+                            Authors.Add(author);
+                            System.Diagnostics.Debug.WriteLine($"Added author to UI: {author.FirstName} {author.LastName} (ID: {author.AuthorId})");
+                        }
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync: UI updated. Final count in collection: {Authors.Count}");
+                    
+                    // Force UI binding refresh
+                    OnPropertyChanged(nameof(Authors));
+                });
+                
+                // Sort authors on UI thread as well
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (Authors.Count > 0)
+                    {
+                        SortAuthors(currentSortProperty, false);
+                        System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync: After sorting, count: {Authors.Count}");
+                    }
+                });
+                
+                System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync: Completed successfully. Total authors in UI: {Authors.Count}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading authors: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync stack trace: {ex.StackTrace}");
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show($"Error loading authors: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
             }
             finally
             {
-                IsLoading = false;
-                // These commands are public properties generated by [RelayCommand]
-                SaveAuthorCommand.NotifyCanExecuteChanged();
-                DeleteAuthorCommand.NotifyCanExecuteChanged();
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = false;
+                    SaveAuthorCommand?.NotifyCanExecuteChanged();
+                    DeleteAuthorCommand?.NotifyCanExecuteChanged();
+                });
             }
         }
 
@@ -187,15 +250,48 @@ namespace BookLibrary.ViewModels.AuthorManagement
                     Biography = NewAuthorBiography
                 };
 
+                System.Diagnostics.Debug.WriteLine($"Adding author: {newAuthor.FirstName} {newAuthor.LastName}");
                 await _authorService.AddAuthorAsync(newAuthor);
-                await LoadAuthorsAsync();
+                System.Diagnostics.Debug.WriteLine("Author added to database successfully");
+                
+                // Clear the form fields first
                 NewAuthorFirstName = string.Empty;
                 NewAuthorLastName = string.Empty;
                 NewAuthorBiography = string.Empty;
-                MessageBox.Show("Author added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Diagnostics.Debug.WriteLine("Form fields cleared");
+                
+                // Get the current count before refresh
+                int countBefore = Authors.Count;
+                System.Diagnostics.Debug.WriteLine($"Authors count before refresh: {countBefore}");
+                
+                // Reload the authors list to include the new author
+                await LoadAuthorsAsync();
+                System.Diagnostics.Debug.WriteLine($"LoadAuthorsAsync completed. New count: {Authors.Count}");
+                
+                // Force multiple UI update notifications
+                OnPropertyChanged(nameof(Authors));
+                OnPropertyChanged(nameof(Authors.Count));
+                
+                // Use Dispatcher to ensure UI update happens on UI thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Select the newly added author if possible
+                    if (Authors.Any())
+                    {
+                        var addedAuthor = Authors.OrderByDescending(a => a.AuthorId).FirstOrDefault();
+                        if (addedAuthor != null)
+                        {
+                            SelectedAuthor = addedAuthor;
+                            System.Diagnostics.Debug.WriteLine($"Selected new author: {addedAuthor.FirstName} {addedAuthor.LastName} (ID: {addedAuthor.AuthorId})");
+                        }
+                    }
+                });
+                
+                MessageBox.Show($"Author added successfully! Total authors: {Authors.Count}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error adding author: {ex.Message}");
                 MessageBox.Show($"Error adding author: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -262,6 +358,13 @@ namespace BookLibrary.ViewModels.AuthorManagement
 
         private void SortAuthors(string propertyName, bool toggleDirection = true)
         {
+            // Don't sort if there are no authors
+            if (Authors == null || Authors.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("SortAuthors: No authors to sort, skipping.");
+                return;
+            }
+
             if (currentSortProperty == propertyName && toggleDirection)
             {
                 isAscending = !isAscending;
@@ -271,6 +374,8 @@ namespace BookLibrary.ViewModels.AuthorManagement
                 currentSortProperty = propertyName;
                 isAscending = true;
             }
+
+            System.Diagnostics.Debug.WriteLine($"SortAuthors: Sorting {Authors.Count} authors by {propertyName}, ascending: {isAscending}");
 
             IOrderedEnumerable<Author> sortedAuthors;
 
@@ -287,14 +392,22 @@ namespace BookLibrary.ViewModels.AuthorManagement
                                                           .ThenByDescending(a => a.FirstName, StringComparer.OrdinalIgnoreCase);
                     break;
                 default:
+                    System.Diagnostics.Debug.WriteLine($"SortAuthors: Unknown property {propertyName}, keeping original order");
                     return;
             }
 
+            // Store the sorted list before clearing
+            var sortedList = sortedAuthors.ToList();
+            System.Diagnostics.Debug.WriteLine($"SortAuthors: Created sorted list with {sortedList.Count} authors");
+
+            // Clear and repopulate
             Authors.Clear();
-            foreach (var author in sortedAuthors)
+            foreach (var author in sortedList)
             {
                 Authors.Add(author);
             }
+            
+            System.Diagnostics.Debug.WriteLine($"SortAuthors: Completed. Final Authors count: {Authors.Count}");
         }
 
         private void UpdateCanSaveAuthor()
@@ -305,20 +418,77 @@ namespace BookLibrary.ViewModels.AuthorManagement
                 return;
             }
 
-            // Updated to require all fields to be filled in
-            bool allFieldsFilled = !string.IsNullOrWhiteSpace(SelectedAuthor.FirstName) &&
-                                   !string.IsNullOrWhiteSpace(SelectedAuthor.LastName) &&
-                                   !string.IsNullOrWhiteSpace(SelectedAuthor.Biography);
+            // Check all three fields are filled (trim whitespace and check for null/empty)
+            bool firstNameFilled = !string.IsNullOrWhiteSpace(SelectedAuthor.FirstName);
+            bool lastNameFilled = !string.IsNullOrWhiteSpace(SelectedAuthor.LastName);
+            bool biographyFilled = !string.IsNullOrWhiteSpace(SelectedAuthor.Biography);
             
-            // Update the property directly without checking previous value
-            // This ensures the binding is always notified
+            bool allFieldsFilled = firstNameFilled && lastNameFilled && biographyFilled;
+            
+            // Debugging info to see what's happening
+            System.Diagnostics.Debug.WriteLine($"UpdateCanSaveAuthor Debug:");
+            System.Diagnostics.Debug.WriteLine($"  FirstName: '{SelectedAuthor.FirstName}' - Filled: {firstNameFilled}");
+            System.Diagnostics.Debug.WriteLine($"  LastName: '{SelectedAuthor.LastName}' - Filled: {lastNameFilled}");
+            System.Diagnostics.Debug.WriteLine($"  Biography: '{SelectedAuthor.Biography}' - Filled: {biographyFilled}");
+            System.Diagnostics.Debug.WriteLine($"  All Fields Filled: {allFieldsFilled}");
+            System.Diagnostics.Debug.WriteLine($"  Setting CanSaveAuthor to: {allFieldsFilled}");
+            
+            // Force property change notification by setting to opposite first if needed
+            if (CanSaveAuthor == allFieldsFilled)
+            {
+                CanSaveAuthor = !allFieldsFilled;
+            }
             CanSaveAuthor = allFieldsFilled;
-
-            // Debugging message to trace the CanSaveAuthor updates
-            System.Diagnostics.Debug.WriteLine($"UpdateCanSaveAuthor: SelectedAuthor='{SelectedAuthor.FirstName} {SelectedAuthor.LastName}', CanSaveAuthor={CanSaveAuthor}");
             
             // This is required because the command's CanExecute needs to be re-evaluated
             SaveAuthorCommand?.NotifyCanExecuteChanged();
+        }
+
+        // --- Track CanSaveAuthor Changes ---
+        partial void OnCanSaveAuthorChanged(bool value)
+        {
+            // This method is called whenever CanSaveAuthor changes
+            System.Diagnostics.Debug.WriteLine($"CanSaveAuthor property changed to: {value}");
+            
+            // Force UI update by raising PropertyChanged manually
+            OnPropertyChanged(nameof(CanSaveAuthor));
+        }
+
+        // Public method to manually trigger the update for testing
+        public void ManuallyUpdateCanSave()
+        {
+            UpdateCanSaveAuthor();
+        }
+
+        // Add a direct database test method
+        public async Task<string> TestDatabaseConnectionAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("TestDatabaseConnectionAsync: Starting direct database test...");
+                var authors = await _authorService.GetAllAuthorsAsync();
+                var count = authors?.Count() ?? 0;
+                
+                var result = $"✅ Database Connection Success!\n" +
+                           $"Authors found: {count}\n";
+                
+                if (count > 0)
+                {
+                    result += "Sample authors:\n";
+                    foreach (var author in authors.Take(3))
+                    {
+                        result += $"- {author.FirstName} {author.LastName}\n";
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"TestDatabaseConnectionAsync: Success with {count} authors");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TestDatabaseConnectionAsync: ERROR - {ex.Message}");
+                return $"❌ Database Connection Failed!\n\nError: {ex.Message}\n\nCheck Debug Output for details.";
+            }
         }
     }
 }

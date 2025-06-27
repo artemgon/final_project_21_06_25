@@ -8,105 +8,294 @@
              xmlns:authorManagement="clr-namespace:BookLibrary.ViewModels.AuthorManagement;assembly=ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance authorManagement:AuthorManagerViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="700" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <local:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        
+        <!-- Styles for consistent appearance -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        
+        <Style x:Key="GroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,10,0,10"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </UserControl.Resources>
     
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <TextBlock Grid.Row="0" 
-                   Text="Author Management" 
-                   FontSize="20" 
-                   FontWeight="Bold" 
-                   Margin="0,0,0,15" 
-                   HorizontalAlignment="Center"/>
-        
-        <!-- Authors List -->
-        <DataGrid Grid.Row="1"
-                  ItemsSource="{Binding Authors}"
-                  SelectedItem="{Binding SelectedAuthor}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  SelectionMode="Single"
-                  Margin="0,0,0,10">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Author ID" Binding="{Binding AuthorId}" Width="80"/>
-                <DataGridTextColumn Header="Name" Binding="{Binding FirstName}" Width="0.5*"/>
-                <DataGridTextColumn Header="Last Name" Binding="{Binding LastName}" Width="0.5*"/>
-                <DataGridTextColumn Header="Biography" Binding="{Binding Biography}" Width="2*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-        
-        <!-- Author Details Panel -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="300"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            
+            <!-- Page Title -->
+            <TextBlock Grid.Row="0" 
+                       Text="Author Management" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Foreground="#2C3E50"
+                       Margin="0,0,0,20" 
+                       HorizontalAlignment="Center"/>
+            
+            <!-- Authors List -->
+            <GroupBox Grid.Row="1" Header="Authors List" Style="{StaticResource GroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Refresh Button -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <Button Content="Test DB Connection" 
+                                Click="TestDbButton_Click"
+                                Width="120" 
+                                Height="30"
+                                Background="#8E44AD"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Margin="0,0,10,0"/>
+                        <Button Content="Force Sync DB" 
+                                Click="ForceSyncButton_Click"
+                                Width="100" 
+                                Height="30"
+                                Background="#E67E22"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Margin="0,0,10,0"/>
+                        <Button Content="Refresh List" 
+                                Click="RefreshButton_Click"
+                                Width="100" 
+                                Height="30"
+                                Background="#34495E"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                    </StackPanel>
+                    
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding Authors}"
+                              SelectedItem="{Binding SelectedAuthor}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8F9FA">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding AuthorId}" Width="60"/>
+                            <DataGridTextColumn Header="First Name" Binding="{Binding FirstName}" Width="*"/>
+                            <DataGridTextColumn Header="Last Name" Binding="{Binding LastName}" Width="*"/>
+                            <DataGridTextColumn Header="Biography" Binding="{Binding Biography}" Width="2*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                        <Setter Property="MaxWidth" Value="300"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </GroupBox>
+            
+            <!-- Edit Selected Author Section -->
+            <GroupBox Grid.Row="2" Header="Edit Selected Author" Style="{StaticResource GroupBoxStyle}">
+                <Grid IsEnabled="{Binding SelectedAuthor, Converter={StaticResource NullToBooleanConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- Author First Name -->
-            <TextBlock Grid.Row="0" Grid.Column="0" 
-                       Text="First Name:" 
-                       FontWeight="SemiBold" 
-                       VerticalAlignment="Center"
-                       Margin="0,0,10,0"/>
-            <TextBox Grid.Row="0" Grid.Column="1" 
-                     Text="{Binding SelectedAuthor.FirstName, UpdateSourceTrigger=PropertyChanged}" 
-                     Margin="0,5"/>
-                     
-            <!-- Author Last Name -->
-            <TextBlock Grid.Row="1" Grid.Column="0" 
-                       Text="Last Name:" 
-                       FontWeight="SemiBold" 
-                       VerticalAlignment="Center"
-                       Margin="0,0,10,0"/>
-            <TextBox Grid.Row="1" Grid.Column="1" 
-                     Text="{Binding SelectedAuthor.LastName, UpdateSourceTrigger=PropertyChanged}" 
-                     Margin="0,5"/>
+                    <!-- First Name -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="First Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                             Text="{Binding SelectedAuthor.FirstName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
+                             
+                    <!-- Last Name -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                               Text="Last Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" 
+                             Text="{Binding SelectedAuthor.LastName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
 
-            <!-- Author Biography -->
-            <TextBlock Grid.Row="2" Grid.Column="0" 
-                       Text="Biography:" 
-                       FontWeight="SemiBold" 
-                       VerticalAlignment="Top"
-                       Margin="0,8,10,0"/>
-            <TextBox Grid.Row="2" Grid.Column="1" 
-                     Text="{Binding SelectedAuthor.Biography, UpdateSourceTrigger=PropertyChanged}" 
-                     TextWrapping="Wrap" 
-                     AcceptsReturn="True" 
-                     Height="80" 
-                     Margin="0,5"/>
+                    <!-- Biography -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" 
+                               Text="Biography:" 
+                               Style="{StaticResource LabelStyle}"
+                               VerticalAlignment="Top"
+                               Margin="0,8,10,0"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" 
+                             Text="{Binding SelectedAuthor.Biography, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" 
+                             AcceptsReturn="True" 
+                             Height="80" 
+                             Margin="0,5,0,15"
+                             Padding="8,5"
+                             VerticalScrollBarVisibility="Auto"/>
 
-            <!-- Control Buttons -->
-            <StackPanel Grid.Row="2" Grid.Column="1" 
-                        Orientation="Horizontal" 
-                        HorizontalAlignment="Right" 
-                        Margin="0,100,0,0">
-                <Button Content="Save" 
-                        Command="{Binding SaveAuthorCommand}" 
-                        Width="80" 
-                        IsEnabled="{Binding CanSaveAuthor}"
-                        Margin="0,0,10,0"/>
-                <Button Content="Delete" 
-                        Command="{Binding DeleteAuthorCommand}" 
-                        Width="80"
-                        IsEnabled="{Binding SelectedAuthor, Converter={StaticResource NullToBooleanConverter}}"/>
-            </StackPanel>
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="3" Grid.Column="1" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <!-- Debug info (remove this in production) -->
+                        <TextBlock Text="{Binding CanSaveAuthor, StringFormat='Debug: CanSave={0}'}" 
+                                   Margin="0,0,15,0" 
+                                   VerticalAlignment="Center"
+                                   Foreground="#E74C3C"
+                                   FontSize="11"
+                                   FontStyle="Italic"/>
+                        
+                        <Button Content="Test Fields" 
+                                Click="TestButton_Click"
+                                Width="90" 
+                                Height="32"
+                                Margin="0,0,10,0"
+                                Background="#3498DB"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                        
+                        <Button Content="Save Changes" 
+                                Command="{Binding SaveAuthorCommand}" 
+                                Width="110" 
+                                Height="32"
+                                IsEnabled="{Binding CanSaveAuthor}"
+                                Margin="0,0,10,0"
+                                Background="#27AE60"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                        
+                        <Button Content="Delete Author" 
+                                Command="{Binding DeleteAuthorCommand}" 
+                                Width="110"
+                                Height="32"
+                                IsEnabled="{Binding SelectedAuthor, Converter={StaticResource NullToBooleanConverter}}"
+                                Background="#E74C3C"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+
+            <!-- Add New Author Section -->
+            <GroupBox Grid.Row="3" Header="Add New Author" Style="{StaticResource GroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- First Name -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="First Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                             Text="{Binding NewAuthorFirstName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
+                             
+                    <!-- Last Name -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                               Text="Last Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" 
+                             Text="{Binding NewAuthorLastName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
+
+                    <!-- Biography -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" 
+                               Text="Biography:" 
+                               Style="{StaticResource LabelStyle}"
+                               VerticalAlignment="Top"
+                               Margin="0,8,10,0"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" 
+                             Text="{Binding NewAuthorBiography, UpdateSourceTrigger=PropertyChanged}" 
+                             TextWrapping="Wrap" 
+                             AcceptsReturn="True" 
+                             Height="80" 
+                             Margin="0,5,0,15"
+                             Padding="8,5"
+                             VerticalScrollBarVisibility="Auto"/>
+
+                    <!-- Add Button -->
+                    <StackPanel Grid.Row="3" Grid.Column="1" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <!-- Debug info for Add New Author -->
+                        <TextBlock Text="{Binding NewAuthorFirstName, StringFormat='First: {0}'}" 
+                                   Margin="0,0,5,0" 
+                                   VerticalAlignment="Center"
+                                   Foreground="#9B59B6"
+                                   FontSize="10"/>
+                        <TextBlock Text="{Binding NewAuthorLastName, StringFormat='Last: {0}'}" 
+                                   Margin="0,0,5,0" 
+                                   VerticalAlignment="Center"
+                                   Foreground="#9B59B6"
+                                   FontSize="10"/>
+                        <TextBlock Text="{Binding NewAuthorBiography, StringFormat='Bio: {0}'}" 
+                                   Margin="0,0,15,0" 
+                                   VerticalAlignment="Center"
+                                   Foreground="#9B59B6"
+                                   FontSize="10"/>
+                        
+                        <!-- Test button for Add Author section -->
+                        <Button Content="Test Add" 
+                                Click="TestAddButton_Click"
+                                Width="80" 
+                                Height="30"
+                                Margin="0,0,10,0"
+                                Background="#8E44AD"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                        
+                        <Button Content="Add New Author" 
+                                Command="{Binding AddAuthorCommand}" 
+                                Width="130" 
+                                Height="35"
+                                Background="#9B59B6"
+                                Foreground="White"
+                                BorderThickness="0"
+                                FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
         </Grid>
-    </Grid>
+    </ScrollViewer>
 </UserControl>
