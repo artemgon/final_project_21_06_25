@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Windows.Input; // Crucial for ICommand
-using BookLibrary.ViewModels.BookManagement;
+using BookLibrary.ViewModels;
 using BookLibrary.ViewModels.AuthorManagement;
 using BookLibrary.ViewModels.GenreManagement;
 using BookLibrary.ViewModels.WishlistManagement;
@@ -97,6 +97,13 @@ namespace ViewModels
                 var mainVm = (MainViewModel)recipient;
                 await mainVm._bookDetailViewModel.LoadBookAsync(message.Value);
                 mainVm.CurrentViewModel = mainVm._bookDetailViewModel;
+            });
+
+            // Subscribe to "navigate back to book list" requests from other ViewModels
+            WeakReferenceMessenger.Default.Register<NavigateToBookListMessage>(this, (recipient, message) =>
+            {
+                var mainVm = (MainViewModel)recipient;
+                mainVm.CurrentViewModel = mainVm._bookListViewModel;
             });
 
             // Set the initial view when the application starts

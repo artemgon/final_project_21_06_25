@@ -1,5 +1,6 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using BookLibrary.Domain.Entities;
 
 namespace ApplicationServices.Contracts
 {

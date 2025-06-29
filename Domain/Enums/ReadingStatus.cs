@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace Domain.Enums
 {
-    internal class ReadingStatus
+    public enum ReadingStatus
     {
+        NotStarted,
+        InProgress,
+        Completed,
+        OnHold,
+        Dropped
     }
 }

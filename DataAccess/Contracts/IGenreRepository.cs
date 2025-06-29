@@ -1,5 +1,6 @@
 ﻿using Domain.Entities;
 using System.Collections.Generic;
+using BookLibrary.Domain.Entities;
 
 namespace DataAccess.Contracts
 {
@@ -11,5 +12,6 @@ namespace DataAccess.Contracts
         public Task UpdateAsync(Genre genre);
         public Task DeleteAsync(int id);
         Task SaveChangesAsync();
+        Task ResetIdentitySeedAsync();
     }
 }

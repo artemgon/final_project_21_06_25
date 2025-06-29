@@ -5,6 +5,7 @@ using Domain.Entities;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using BookLibrary.Domain.Entities;
 using DataAccess.Contracts;
 
 namespace DataAccess.Implementations
@@ -79,6 +80,15 @@ namespace DataAccess.Implementations
             }
             // Return a completed task since no asynchronous database operation is happening directly here.
             return Task.CompletedTask;
+        }
+
+        public async Task ResetIdentitySeedAsync()
+        {
+            using (var connection = _connectionFactory.CreateConnection())
+            {
+                // Reset the identity seed to 0, so the next insert will have ID 1
+                await connection.ExecuteAsync("DBCC CHECKIDENT ('Genres', RESEED, 0)");
+            }
         }
     }
 }

@@ -176,5 +176,14 @@ namespace DataAccess.Implementations
             }
             return Task.CompletedTask; // Since no async DB operation is performed directly here
         }
+
+        public async Task ResetIdentitySeedAsync()
+        {
+            using (var connection = _connectionFactory.CreateConnection())
+            {
+                // Reset the identity seed to 0, so the next insert will have ID 1
+                await connection.ExecuteAsync("DBCC CHECKIDENT ('Authors', RESEED, 0)");
+            }
+        }
     }
 }

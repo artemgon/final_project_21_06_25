@@ -15,7 +15,12 @@ namespace ViewModels.Converters
         {
             if (value is ICollection<Author> authors && authors.Any())
             {
-                return string.Join(", ", authors.Select(a => $"{a.FirstName} {a.LastName}"));
+                return string.Join(", ", authors.Select(a => 
+                {
+                    var firstName = string.IsNullOrWhiteSpace(a.FirstName) ? "Unknown" : a.FirstName.Trim();
+                    var lastName = string.IsNullOrWhiteSpace(a.LastName) ? "Unknown" : a.LastName.Trim();
+                    return $"{firstName} {lastName}";
+                }));
             }
             return "N/A";
         }

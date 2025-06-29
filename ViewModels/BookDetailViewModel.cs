@@ -1,7 +1,8 @@
 ﻿// BookLibrary.ViewModels/BookManagement/BookDetailViewModel.cs
 // Make sure these using statements are present at the top of your file.
 using BookLibrary.ApplicationServices.Contracts; // For IBookService, IAuthorService, IGenreService
-using Domain.Entities; // For Book, Author, Genre entities// For ViewModelBase (which should inherit ObservableObject)
+using Domain.Entities; // For Book, Author, Genre entities
+using Domain.Enums; // For ReadingStatus enum
 using CommunityToolkit.Mvvm.ComponentModel; // Required for [ObservableProperty] and ObservableObject
 using CommunityToolkit.Mvvm.Input;       // Required for [RelayCommand] and AsyncRelayCommand
 using Microsoft.Win32; // For OpenFileDialog
@@ -12,11 +13,12 @@ using System.Windows; // Required for MessageBox
 using System;
 using ApplicationServices.Contracts;
 using BookLibrary.Domain.Entities;
-using Domain.Entities;
+using BookLibrary.ViewModels.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using ViewModels;
 using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand; // For DateTime, StringComparison
 
-namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches your folder structure
+namespace ViewModels // Fixed namespace to match file location
 {
     // Mark BookDetailViewModel as 'partial' for CommunityToolkit.Mvvm source generation
     public partial class BookDetailViewModel : ViewModelBase
@@ -24,6 +26,7 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         private readonly IBookService _bookService;
         private readonly IAuthorService _authorService;
         private readonly IGenreService _genreService;
+        private readonly IImageService _imageService; // Add image service
 
         // Represents the book currently being edited or created.
         [ObservableProperty]
@@ -46,13 +49,29 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
 
         // Properties for the search boxes within author/genre selection ListBoxes.
         [ObservableProperty]
-        private string authorSearchTerm;
+        private string authorSearchTerm = string.Empty;
         [ObservableProperty]
-        private string genreSearchTerm;
+        private string genreSearchTerm = string.Empty;
+
+        // Property for URL input
+        [ObservableProperty]
+        private string imageUrlInput = string.Empty;
 
         // Filtered views of available authors/genres. These are bound directly to the UI ListBoxes.
         public ObservableCollection<SelectableAuthorViewModel> FilteredAvailableAuthors { get; } = new ObservableCollection<SelectableAuthorViewModel>();
         public ObservableCollection<SelectableGenreViewModel> FilteredAvailableGenres { get; } = new ObservableCollection<SelectableGenreViewModel>();
+
+        // Selected items in the available lists for adding
+        [ObservableProperty]
+        private SelectableAuthorViewModel? selectedAvailableAuthor;
+        [ObservableProperty]
+        private SelectableGenreViewModel? selectedAvailableGenre;
+        
+        // Selected items in the current lists for removing
+        [ObservableProperty]
+        private Author? selectedCurrentAuthor;
+        [ObservableProperty]
+        private Genre? selectedCurrentGenre;
 
         // --- Commands ---
         // Command to load a specific book for editing (takes bookId as parameter).
@@ -65,21 +84,39 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         public RelayCommand ChangeCoverImageCommand { get; }
         // Command to cancel the operation and typically navigate back.
         public RelayCommand CancelCommand { get; }
+        // Commands to add selected authors and genres to the current book
+        public RelayCommand AddAuthorCommand { get; }
+        public RelayCommand AddGenreCommand { get; }
+        // Commands to remove selected authors and genres from the current book
+        public RelayCommand RemoveAuthorCommand { get; }
+        public RelayCommand RemoveGenreCommand { get; }
+        // New commands for URL functionality and image removal
+        public RelayCommand LoadImageFromUrlCommand { get; }
+        public RelayCommand RemoveImageCommand { get; }
 
 
         // Constructor: Services are injected here by the Dependency Injection container.
-        public BookDetailViewModel(IBookService bookService, IAuthorService authorService, IGenreService genreService)
+        public BookDetailViewModel(IBookService bookService, IAuthorService authorService, IGenreService genreService, IImageService imageService)
         {
             _bookService = bookService;
             _authorService = authorService;
             _genreService = genreService;
+            _imageService = imageService;
 
             // Initialize CurrentBook with a default empty instance.
             // This ensures CurrentBook is never null and can be bound to immediately.
             currentBook = new Book
             {
-                Authors = new List<Author>(), // Initialize collections to avoid NREs
-                Genres = new List<Genre>()
+                Title = "New Book", // Start with a default title so Save button works
+                ISBN = string.Empty,
+                PublicationYear = DateTime.Now.Year,
+                PageCount = 100, // Default page count so Save button works
+                ReadingStatus = ReadingStatus.NotStarted,
+                Rating = null, // Keep rating optional
+                Summary = string.Empty,
+                CoverImagePath = string.Empty,
+                Authors = new ObservableCollection<Author>(),
+                Genres = new ObservableCollection<Genre>()
             };
 
             // --- Initialize Commands ---
@@ -94,6 +131,12 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
             SaveBookCommand = new AsyncRelayCommand(SaveBookAsync, CanSaveBook); // Predicate for validation
             ChangeCoverImageCommand = new RelayCommand(ChangeCoverImage);
             CancelCommand = new RelayCommand(Cancel);
+            AddAuthorCommand = new RelayCommand(AddAuthor);
+            AddGenreCommand = new RelayCommand(AddGenre);
+            RemoveAuthorCommand = new RelayCommand(RemoveAuthor);
+            RemoveGenreCommand = new RelayCommand(RemoveGenre);
+            LoadImageFromUrlCommand = new RelayCommand(LoadImageFromUrl);
+            RemoveImageCommand = new RelayCommand(RemoveImage);
 
             // Subscribe to search term changes for dynamic filtering of authors/genres.
             // The PropertyChanged event is inherited from ObservableObject (via ViewModelBase).
@@ -178,13 +221,13 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
                 Title = string.Empty,
                 ISBN = string.Empty,
                 PublicationYear = DateTime.Now.Year, // Default to current year
-                PageCount = 0,
-                ReadingStatus = "To Read", // Default status as per request
-                Rating = 0, // Default rating
+                PageCount = null, // Make it nullable/optional
+                ReadingStatus = ReadingStatus.NotStarted, // Use simplified enum reference
+                Rating = null, // Keep rating null instead of 0 to avoid constraint violation
                 Summary = string.Empty,
                 CoverImagePath = string.Empty,
-                Authors = new List<Author>(), // Initialize empty collections for a new book
-                Genres = new List<Genre>()
+                Authors = new ObservableCollection<Author>(), // Initialize empty collections for a new book
+                Genres = new ObservableCollection<Genre>()
             };
 
             try
@@ -204,21 +247,225 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         }
 
         /// <summary>
-        /// Opens a file dialog to select a cover image and updates CurrentBook.CoverImagePath.
+        /// Opens a file dialog to select a cover image for the book.
+        /// Shows preview immediately for both new and existing books.
         /// </summary>
         private void ChangeCoverImage()
         {
-            var dialog = new OpenFileDialog
+            try
             {
-                Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp;*.gif",
-                Title = "Select Cover Image"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                CurrentBook.CoverImagePath = dialog.FileName;
-                // No need for OnPropertyChanged(nameof(CurrentBook)); if CurrentBook is [ObservableProperty]
-                // Its properties changing will trigger UI updates if bound correctly.
+                var openFileDialog = new OpenFileDialog
+                {
+                    Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tiff;*.webp|" +
+                            "JPEG Files|*.jpg;*.jpeg|" +
+                            "PNG Files|*.png|" +
+                            "All Files|*.*",
+                    Title = "Select Cover Image",
+                    CheckFileExists = true,
+                    CheckPathExists = true
+                };
+
+                if (openFileDialog.ShowDialog() == true)
+                {
+                    var selectedImagePath = openFileDialog.FileName;
+                    
+                    // Validate the image file
+                    if (!_imageService.ValidateImageFile(selectedImagePath))
+                    {
+                        MessageBox.Show("Please select a valid image file (jpg, jpeg, png, gif, bmp).", 
+                            "Invalid Image", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    // Show preview immediately for both new and existing books
+                    CurrentBook.CoverImagePath = selectedImagePath;
+                    OnPropertyChanged(nameof(CurrentBook));
+                    
+                    // For existing books, save the image in the background
+                    if (!IsNewBook)
+                    {
+                        Task.Run(async () =>
+                        {
+                            try
+                            {
+                                IsLoading = true;
+                                
+                                // Delete old cover image if it exists and it's not the current one
+                                var oldPath = CurrentBook.CoverImagePath;
+                                if (!string.IsNullOrEmpty(oldPath) && oldPath != selectedImagePath)
+                                {
+                                    await _imageService.DeleteBookCoverAsync(oldPath);
+                                }
+
+                                // Save new cover image
+                                var relativePath = await _imageService.SaveBookCoverAsync(selectedImagePath, CurrentBook.BookId);
+                                
+                                // Update the book's cover image path
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    CurrentBook.CoverImagePath = relativePath;
+                                    OnPropertyChanged(nameof(CurrentBook));
+                                });
+
+                                // Update the book in the database
+                                await _bookService.UpdateBookAsync(CurrentBook);
+                                
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    MessageBox.Show("Cover image updated successfully!", "Success", 
+                                        MessageBoxButton.OK, MessageBoxImage.Information);
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    MessageBox.Show($"Error updating cover image: {ex.Message}", "Error", 
+                                        MessageBoxButton.OK, MessageBoxImage.Error);
+                                });
+                            }
+                            finally
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    IsLoading = false;
+                                });
+                            }
+                        });
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Loads an image from the specified URL and sets it as the book's cover image.
+        /// Shows preview immediately for both new and existing books.
+        /// </summary>
+        private void LoadImageFromUrl()
+        {
+            if (string.IsNullOrWhiteSpace(ImageUrlInput))
+            {
+                MessageBox.Show("Please enter a valid image URL.", "Invalid URL", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Show preview immediately for both new and existing books
+            CurrentBook.CoverImagePath = ImageUrlInput;
+            OnPropertyChanged(nameof(CurrentBook));
+            
+            // For existing books, download and save the image in the background
+            if (!IsNewBook)
+            {
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        IsLoading = true;
+                        
+                        // Delete old cover image if it exists
+                        var oldPath = CurrentBook.CoverImagePath;
+                        if (!string.IsNullOrEmpty(oldPath) && oldPath != ImageUrlInput)
+                        {
+                            await _imageService.DeleteBookCoverAsync(oldPath);
+                        }
+
+                        // Download and save the new image
+                        var downloadedImagePath = await _imageService.DownloadImageAsync(ImageUrlInput);
+                        var relativePath = await _imageService.SaveBookCoverAsync(downloadedImagePath, CurrentBook.BookId);
+                        
+                        // Update the book's cover image path
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            CurrentBook.CoverImagePath = relativePath;
+                            OnPropertyChanged(nameof(CurrentBook));
+                        });
+
+                        // Update the book in the database
+                        await _bookService.UpdateBookAsync(CurrentBook);
+                        
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show("Cover image updated successfully!", "Success", 
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show($"Error updating cover image: {ex.Message}", "Error", 
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                    }
+                    finally
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            IsLoading = false;
+                        });
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Removes the cover image from the book. For new books, clears the URL. For existing books, deletes the image file.
+        /// </summary>
+        private void RemoveImage()
+        {
+            if (IsNewBook)
+            {
+                // For new books, just clear the URL
+                CurrentBook.CoverImagePath = string.Empty;
+                MessageBox.Show("Cover image removed. The book will be saved without a cover image.", 
+                                "Image Removed", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                // For existing books, delete the image file
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Delete the cover image file
+                        await _imageService.DeleteBookCoverAsync(CurrentBook.CoverImagePath);
+
+                        // Clear the cover image path in the book
+                        CurrentBook.CoverImagePath = string.Empty;
+
+                        // Update the book in the database
+                        await _bookService.UpdateBookAsync(CurrentBook);
+                        
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show("Cover image removed successfully!", "Success", 
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show($"Error removing cover image: {ex.Message}", "Error", 
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                    }
+                    finally
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            IsLoading = false;
+                        });
+                    }
+                });
+            }
+
+            OnPropertyChanged(nameof(CurrentBook));
         }
 
         /// <summary>
@@ -232,24 +479,11 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
             if (CurrentBook == null)
                 return false;
 
-            // Title cannot be empty
+            // Title cannot be empty (this is the only required field)
             if (string.IsNullOrWhiteSpace(CurrentBook.Title))
                 return false;
 
-            // PublicationYear must be a valid positive year and not in the future
-            if (CurrentBook.PublicationYear <= 0 || CurrentBook.PublicationYear > DateTime.Now.Year)
-                return false;
-
-            // PageCount must be positive
-            if (CurrentBook.PageCount <= 0)
-                return false;
-
-            // Rating must be between 1 and 5 (inclusive) if provided
-            if (CurrentBook.Rating.HasValue && (CurrentBook.Rating.Value < 1 || CurrentBook.Rating.Value > 5))
-                return false;
-            
-            // Optionally: Add more validation here (e.g., ISBN format, at least one author/genre, etc.)
-
+            // All other validations are optional - let's be more permissive
             return true; // All validation checks passed
         }
 
@@ -308,18 +542,11 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
 
         /// <summary>
         /// Cancels the current operation and navigates back to the main book list.
-        /// (In a real app, this would use a Messenger/EventAggregator for navigation).
         /// </summary>
         private void Cancel()
         {
-            // This is a placeholder for actual navigation.
-            // In a full MVVM framework (like using an EventAggregator or Messenger service),
-            // this would send a message to MainViewModel to change the current view.
-            MessageBox.Show("Operation cancelled. Returning to Book List.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-            
-            // To actually navigate back, you would likely do something like:
-            // WeakReferenceMessenger.Default.Send(new NavigateMessage(typeof(BookListViewModel)));
-            // For now, assume MainViewModel handles the return implicitly or you'll manually navigate in testing.
+            // Send a message to navigate back to the book list
+            WeakReferenceMessenger.Default.Send(new NavigateToBookListMessage());
         }
 
         // --- Helper Methods for Author/Genre Selection Logic ---
@@ -341,6 +568,16 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
                 AllAvailableAuthors.Add(selectableAuthor);
                 FilteredAvailableAuthors.Add(selectableAuthor); // Initially, all are in the filtered list
             }
+
+            AllAvailableGenres.Clear();
+            FilteredAvailableGenres.Clear(); // Clear filtered list too
+            var genres = await _genreService.GetAllGenresAsync();
+            foreach (var genre in genres.OrderBy(g => g.GenreName)) // Order for display
+            {
+                var selectableGenre = new SelectableGenreViewModel(genre);
+                AllAvailableGenres.Add(selectableGenre);
+                FilteredAvailableGenres.Add(selectableGenre); // Initially, all are in the filtered list
+            }
         }
 
         /// <summary>
@@ -352,8 +589,8 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         {
             // Ensure CurrentBook's Authors and Genres are initialized
             // This is vital if the loaded book didn't have any associations
-            if (CurrentBook.Authors == null) CurrentBook.Authors = new List<Author>();
-            if (CurrentBook.Genres == null) CurrentBook.Genres = new List<Genre>();
+            if (CurrentBook.Authors == null) CurrentBook.Authors = new ObservableCollection<Author>();
+            if (CurrentBook.Genres == null) CurrentBook.Genres = new ObservableCollection<Genre>();
 
             // Mark authors as selected based on CurrentBook's authors
             foreach (var selectableAuthor in AllAvailableAuthors)
@@ -398,6 +635,104 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
             {
                 FilteredAvailableGenres.Add(genreVm);
             }
+        }
+
+        /// <summary>
+        /// Adds the selected author from the available authors list to the current book.
+        /// </summary>
+        private void AddAuthor()
+        {
+            if (SelectedAvailableAuthor != null && !CurrentBook.Authors.Any(a => a.AuthorId == SelectedAvailableAuthor.Author.AuthorId))
+            {
+                CurrentBook.Authors.Add(SelectedAvailableAuthor.Author);
+                SelectedAvailableAuthor.IsSelected = true; // Keep the author selected in the UI
+            }
+        }
+
+        /// <summary>
+        /// Adds the selected genre from the available genres list to the current book.
+        /// </summary>
+        private void AddGenre()
+        {
+            if (SelectedAvailableGenre != null && !CurrentBook.Genres.Any(g => g.GenreId == SelectedAvailableGenre.Genre.GenreId))
+            {
+                CurrentBook.Genres.Add(SelectedAvailableGenre.Genre);
+                SelectedAvailableGenre.IsSelected = true; // Keep the genre selected in the UI
+            }
+        }
+
+        /// <summary>
+        /// Removes the selected author from the current book.
+        /// </summary>
+        private void RemoveAuthor()
+        {
+            if (SelectedCurrentAuthor == null)
+            {
+                System.Diagnostics.Debug.WriteLine("RemoveAuthor: SelectedCurrentAuthor is null, aborting");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"RemoveAuthor: Removing {SelectedCurrentAuthor.FirstName} {SelectedCurrentAuthor.LastName}");
+            
+            // Store the author ID before removing to avoid null reference later
+            var authorIdToRemove = SelectedCurrentAuthor.AuthorId;
+            
+            // Remove from current book's authors collection
+            CurrentBook.Authors.Remove(SelectedCurrentAuthor);
+            
+            // Find the corresponding SelectableAuthorViewModel and unselect it
+            // Add comprehensive null checks
+            if (AllAvailableAuthors != null && AllAvailableAuthors.Any())
+            {
+                var selectableAuthor = AllAvailableAuthors.FirstOrDefault(a => a != null && a.Author != null && a.Author.AuthorId == authorIdToRemove);
+                if (selectableAuthor != null)
+                {
+                    selectableAuthor.IsSelected = false;
+                    System.Diagnostics.Debug.WriteLine($"RemoveAuthor: Unmarked {selectableAuthor.FullName} as selected");
+                }
+            }
+            
+            // Clear the selection
+            SelectedCurrentAuthor = null;
+            
+            System.Diagnostics.Debug.WriteLine($"RemoveAuthor: Current authors count: {CurrentBook.Authors.Count}");
+        }
+
+        /// <summary>
+        /// Removes the selected genre from the current book.
+        /// </summary>
+        private void RemoveGenre()
+        {
+            if (SelectedCurrentGenre == null)
+            {
+                System.Diagnostics.Debug.WriteLine("RemoveGenre: SelectedCurrentGenre is null, aborting");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"RemoveGenre: Removing {SelectedCurrentGenre.GenreName}");
+            
+            // Store the genre ID before removing to avoid null reference later
+            var genreIdToRemove = SelectedCurrentGenre.GenreId;
+            
+            // Remove from current book's genres collection
+            CurrentBook.Genres.Remove(SelectedCurrentGenre);
+            
+            // Find the corresponding SelectableGenreViewModel and unselect it
+            // Add comprehensive null checks
+            if (AllAvailableGenres != null && AllAvailableGenres.Any())
+            {
+                var selectableGenre = AllAvailableGenres.FirstOrDefault(g => g != null && g.Genre != null && g.Genre.GenreId == genreIdToRemove);
+                if (selectableGenre != null)
+                {
+                    selectableGenre.IsSelected = false;
+                    System.Diagnostics.Debug.WriteLine($"RemoveGenre: Unmarked {selectableGenre.Genre.GenreName} as selected");
+                }
+            }
+            
+            // Clear the selection
+            SelectedCurrentGenre = null;
+            
+            System.Diagnostics.Debug.WriteLine($"RemoveGenre: Current genres count: {CurrentBook.Genres.Count}");
         }
     }
 

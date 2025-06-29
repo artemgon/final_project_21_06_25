@@ -36,6 +36,17 @@ namespace BookLibrary.ApplicationServices.Implementations
 
         public async Task AddBookAsync(Book book)
         {
+            // Check if a book with the same ISBN already exists
+            if (!string.IsNullOrEmpty(book.ISBN))
+            {
+                var allBooks = await _bookRepository.GetAllWithDetailsAsync();
+                var existingBook = allBooks.FirstOrDefault(b => b.ISBN == book.ISBN);
+                if (existingBook != null)
+                {
+                    throw new InvalidOperationException($"A book with ISBN '{book.ISBN}' already exists: '{existingBook.Title}'");
+                }
+            }
+
             await _bookRepository.AddAsync(book);
             await _bookRepository.SaveChangesAsync();
         }

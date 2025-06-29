@@ -21,4 +21,14 @@ namespace BookLibrary.ViewModels.Messages
     {
         public NavigateToEditBookMessage(int bookId) : base(bookId) { }
     }
+
+    /// <summary>
+    /// Message sent when a request to navigate back to the Book List view is made.
+    /// </summary>
+    public class NavigateToBookListMessage : ValueChangedMessage<bool>
+    {
+        // Value is not strictly needed for navigation back, but ValueChangedMessage requires it.
+        // We can just pass true to indicate a request.
+        public NavigateToBookListMessage() : base(true) { }
+    }
 }

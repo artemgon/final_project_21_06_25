@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ApplicationServices.Contracts;
 using DataAccess.Contracts;
+using System.Linq; // Add this for the .Any() method
 
 namespace BookLibrary.ApplicationServices.Implementations
 {
@@ -70,6 +71,14 @@ namespace BookLibrary.ApplicationServices.Implementations
             // Implement retrieval and deletion, or direct delete if supported by repository
             await _authorRepository.DeleteAsync(authorId);
             await _authorRepository.SaveChangesAsync();
+            
+            // Check if there are any authors left
+            var remainingAuthors = await _authorRepository.GetAllAsync();
+            if (!remainingAuthors.Any())
+            {
+                // Reset identity seed to 0 so next insert will be ID 1
+                await _authorRepository.ResetIdentitySeedAsync();
+            }
         }
     }
 }

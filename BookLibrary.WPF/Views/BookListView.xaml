@@ -4,12 +4,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:viewmodels="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=BookLibrary.ViewModels"
+             xmlns:viewmodels="clr-namespace:BookLibrary.ViewModels;assembly=BookLibrary.ViewModels"
              xmlns:converters="clr-namespace:ViewModels.Converters;assembly=BookLibrary.ViewModels"
-             xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=ViewModels"
+             xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels;assembly=ViewModels"
              xmlns:converters1="clr-namespace:ViewModels.Converters;assembly=ViewModels"
+             xmlns:local="clr-namespace:BookLibrary.WPF.Converters"
+             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance bookManagement:BookListViewModel, IsDesignTimeCreatable=True}"
+             d:DataContext="{d:DesignInstance viewModels:BookListViewModel, IsDesignTimeCreatable=True}"
              d:DesignHeight="450" d:DesignWidth="800">
 
     <UserControl.Resources>
@@ -17,6 +19,9 @@
         <converters1:AuthorsToStringConverter x:Key="AuthorsConverter"/>
         <!-- Reusing the BooleanToVisibilityConverter -->
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <!-- Add the NullToBooleanConverter -->
+        <local:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        
         <!-- Reusing SmallSortButton style - ensure this style is either defined globally (e.g., App.xaml)
              or is available here. If you prefer global, remove this style definition and add it to App.xaml. -->
         <Style x:Key="SmallSortButton" TargetType="Button">
@@ -95,28 +100,62 @@
                   IsReadOnly="True"
                   Margin="10"
                   HeadersVisibility="Column"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  RowHeight="80">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="2*"/>
-                <!-- Binding Authors to the converter to display as a comma-separated string -->
-                <DataGridTextColumn Header="Authors" Binding="{Binding Authors, Converter={StaticResource AuthorsConverter}}" Width="1.5*"/>
+                <!-- Split Authors into separate First Name and Last Name columns -->
+                <DataGridTextColumn Header="Author First Name" Width="*">
+                    <DataGridTextColumn.Binding>
+                        <Binding Path="Authors">
+                            <Binding.Converter>
+                                <converters1:AuthorFirstNameConverter/>
+                            </Binding.Converter>
+                        </Binding>
+                    </DataGridTextColumn.Binding>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Author Last Name" Width="*">
+                    <DataGridTextColumn.Binding>
+                        <Binding Path="Authors">
+                            <Binding.Converter>
+                                <converters1:AuthorLastNameConverter/>
+                            </Binding.Converter>
+                        </Binding>
+                    </DataGridTextColumn.Binding>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="Reading Status" Binding="{Binding ReadingStatus}" Width="*"/>
                 <DataGridTextColumn Header="Rating" Binding="{Binding Rating}" Width="0.5*"/>
                 <DataGridTextColumn Header="Pages" Binding="{Binding PageCount}" Width="0.5*"/>
                 <DataGridTextColumn Header="Published Year" Binding="{Binding PublicationYear}" Width="*"/>
+                
+                <!-- Cover Image Column - moved to the right -->
+                <DataGridTemplateColumn Header="Cover" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="LightGray" BorderThickness="1" 
+                                    Width="60" Height="70" Margin="2">
+                                <Image Source="{Binding CoverImagePath, TargetNullValue='../Images/fff&amp;text=No+image+available.png'}" 
+                                       Stretch="Uniform" 
+                                       StretchDirection="DownOnly"/>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Refresh" Command="{Binding RefreshBooksCommand}" Padding="15,8" Margin="0,0,10,0"
+                    ToolTip="Refresh the book list"/>
             <Button Content="Add New" Command="{Binding AddBookCommand}" Padding="15,8" Margin="0,0,10,0"
                     ToolTip="Create a new book record"/>
             <Button Content="Edit Selected" Command="{Binding EditBookCommand}" Padding="15,8" Margin="0,0,10,0"
-                    IsEnabled="{Binding EditBookCommand}"  /><!-- REMOVED .CanExecute -->
+                    ToolTip="Edit the selected book"/>
             <Button Content="Delete Selected" Command="{Binding DeleteBookCommand}" Padding="15,8" Margin="0,0,10,0"
-                    IsEnabled="{Binding DeleteBookCommand}" /><!-- REMOVED .CanExecute -->
+                    ToolTip="Delete the selected book" />
             <Button Content="Add to Wishlist" Command="{Binding AddToWishlistCommand}" Padding="15,8"
-                    IsEnabled="{Binding AddToWishlistCommand}"/><!-- REMOVED .CanExecute -->
+                    ToolTip="Add the selected book to your wishlist"/>
         </StackPanel>
 
         <!-- Loading Overlay -->

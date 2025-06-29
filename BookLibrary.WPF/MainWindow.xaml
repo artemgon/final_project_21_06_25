@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
         xmlns:views="clr-namespace:BookLibrary.WPF.Views"
-        xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels.BookManagement;assembly=ViewModels"
+        xmlns:bookManagement="clr-namespace:BookLibrary.ViewModels;assembly=ViewModels"
         xmlns:authorManagement="clr-namespace:BookLibrary.ViewModels.AuthorManagement;assembly=ViewModels"
         xmlns:genreManagement="clr-namespace:BookLibrary.ViewModels.GenreManagement;assembly=ViewModels"
         xmlns:wishlistManagement="clr-namespace:BookLibrary.ViewModels.WishlistManagement;assembly=ViewModels"
@@ -41,11 +41,11 @@
         </Style>
         
         <!-- DataTemplates for View-ViewModel Mapping -->
-        <DataTemplate DataType="{x:Type bookManagement:BookListViewModel}">
+        <DataTemplate DataType="{x:Type viewModels:BookListViewModel}">
             <views:BookListView />
         </DataTemplate>
         
-        <DataTemplate DataType="{x:Type bookManagement:BookDetailViewModel}">
+        <DataTemplate DataType="{x:Type viewModels:BookDetailViewModel}">
             <views:BookDetailView />
         </DataTemplate>
         

@@ -4,7 +4,9 @@ using Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ApplicationServices.Contracts;
+using BookLibrary.Domain.Entities;
 using DataAccess.Contracts;
+using System.Linq; // Add this for the .Any() method
 
 namespace BookLibrary.ApplicationServices.Implementations
 {
@@ -38,6 +40,14 @@ namespace BookLibrary.ApplicationServices.Implementations
         {
             await _genreRepository.DeleteAsync(genreId);
             await _genreRepository.SaveChangesAsync();
+            
+            // Check if there are any genres left
+            var remainingGenres = await _genreRepository.GetAllAsync();
+            if (!remainingGenres.Any())
+            {
+                // Reset identity seed to 0 so next insert will be ID 1
+                await _genreRepository.ResetIdentitySeedAsync();
+            }
         }
     }
 }

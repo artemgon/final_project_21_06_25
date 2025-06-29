@@ -6,12 +6,13 @@
              xmlns:local="clr-namespace:BookLibrary.WPF.Views"
              xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              xmlns:authorManagement="clr-namespace:BookLibrary.ViewModels.AuthorManagement;assembly=ViewModels"
+             xmlns:converters="clr-namespace:BookLibrary.WPF.Converters"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance authorManagement:AuthorManagerViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="700" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <local:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
         
         <!-- Styles for consistent appearance -->
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
@@ -64,22 +65,6 @@
                     
                     <!-- Refresh Button -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
-                        <Button Content="Test DB Connection" 
-                                Click="TestDbButton_Click"
-                                Width="120" 
-                                Height="30"
-                                Background="#8E44AD"
-                                Foreground="White"
-                                BorderThickness="0"
-                                Margin="0,0,10,0"/>
-                        <Button Content="Force Sync DB" 
-                                Click="ForceSyncButton_Click"
-                                Width="100" 
-                                Height="30"
-                                Background="#E67E22"
-                                Foreground="White"
-                                BorderThickness="0"
-                                Margin="0,0,10,0"/>
                         <Button Content="Refresh List" 
                                 Click="RefreshButton_Click"
                                 Width="100" 
@@ -117,7 +102,7 @@
             
             <!-- Edit Selected Author Section -->
             <GroupBox Grid.Row="2" Header="Edit Selected Author" Style="{StaticResource GroupBoxStyle}">
-                <Grid IsEnabled="{Binding SelectedAuthor, Converter={StaticResource NullToBooleanConverter}}">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -167,23 +152,6 @@
                     <StackPanel Grid.Row="3" Grid.Column="1" 
                                 Orientation="Horizontal" 
                                 HorizontalAlignment="Right">
-                        <!-- Debug info (remove this in production) -->
-                        <TextBlock Text="{Binding CanSaveAuthor, StringFormat='Debug: CanSave={0}'}" 
-                                   Margin="0,0,15,0" 
-                                   VerticalAlignment="Center"
-                                   Foreground="#E74C3C"
-                                   FontSize="11"
-                                   FontStyle="Italic"/>
-                        
-                        <Button Content="Test Fields" 
-                                Click="TestButton_Click"
-                                Width="90" 
-                                Height="32"
-                                Margin="0,0,10,0"
-                                Background="#3498DB"
-                                Foreground="White"
-                                BorderThickness="0"/>
-                        
                         <Button Content="Save Changes" 
                                 Command="{Binding SaveAuthorCommand}" 
                                 Width="110" 
@@ -198,7 +166,6 @@
                                 Command="{Binding DeleteAuthorCommand}" 
                                 Width="110"
                                 Height="32"
-                                IsEnabled="{Binding SelectedAuthor, Converter={StaticResource NullToBooleanConverter}}"
                                 Background="#E74C3C"
                                 Foreground="White"
                                 BorderThickness="0"/>
@@ -258,33 +225,6 @@
                     <StackPanel Grid.Row="3" Grid.Column="1" 
                                 Orientation="Horizontal" 
                                 HorizontalAlignment="Right">
-                        <!-- Debug info for Add New Author -->
-                        <TextBlock Text="{Binding NewAuthorFirstName, StringFormat='First: {0}'}" 
-                                   Margin="0,0,5,0" 
-                                   VerticalAlignment="Center"
-                                   Foreground="#9B59B6"
-                                   FontSize="10"/>
-                        <TextBlock Text="{Binding NewAuthorLastName, StringFormat='Last: {0}'}" 
-                                   Margin="0,0,5,0" 
-                                   VerticalAlignment="Center"
-                                   Foreground="#9B59B6"
-                                   FontSize="10"/>
-                        <TextBlock Text="{Binding NewAuthorBiography, StringFormat='Bio: {0}'}" 
-                                   Margin="0,0,15,0" 
-                                   VerticalAlignment="Center"
-                                   Foreground="#9B59B6"
-                                   FontSize="10"/>
-                        
-                        <!-- Test button for Add Author section -->
-                        <Button Content="Test Add" 
-                                Click="TestAddButton_Click"
-                                Width="80" 
-                                Height="30"
-                                Margin="0,0,10,0"
-                                Background="#8E44AD"
-                                Foreground="White"
-                                BorderThickness="0"/>
-                        
                         <Button Content="Add New Author" 
                                 Command="{Binding AddAuthorCommand}" 
                                 Width="130" 

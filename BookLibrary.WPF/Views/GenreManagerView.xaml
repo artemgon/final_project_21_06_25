@@ -5,150 +5,179 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:BookLibrary.WPF.Views"
-             xmlns:viewModels="clr-namespace:BookLibrary.ViewModels.GenreManagement;assembly=BookLibrary.ViewModels"
-             xmlns:converters="clr-namespace:ViewModels.Converters;assembly=BookLibrary.ViewModels"
+             xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
              xmlns:genreManagement="clr-namespace:BookLibrary.ViewModels.GenreManagement;assembly=ViewModels"
+             xmlns:converters="clr-namespace:BookLibrary.WPF.Converters"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance genreManagement:GenreManagerViewModel, IsDesignTimeCreatable=True}"
-             d:DesignHeight="450" d:DesignWidth="800">
-
+             d:DataContext="{d:DesignInstance genreManagement:GenreManagerViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="700" d:DesignWidth="900">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <!-- Style for small sort buttons - reuse from your App.xaml or BookListView if global, or define here -->
-        <Style x:Key="SmallSortButton" TargetType="Button">
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        
+        <!-- Styles for consistent appearance -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
-                                CornerRadius="3">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#D0D0D0"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#C0C0C0"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        
+        <Style x:Key="GroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,10,0,10"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </UserControl.Resources>
-
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="Auto"/> <!-- Sorting Buttons -->
-            <RowDefinition Height="*"/>    <!-- Genres List -->
-            <RowDefinition Height="Auto"/> <!-- Genre Details & Add New Genre -->
-        </Grid.RowDefinitions>
-
-        <TextBlock Grid.Row="0"
-                   Text="Genre Management"
-                   FontSize="20"
-                   FontWeight="Bold"
-                   Margin="0,0,0,15"
-                   HorizontalAlignment="Center"/>
-
-        <!-- Sorting Buttons -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-            <TextBlock Text="Sort By:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <Button Content="Genre ID" Command="{Binding SortByGenreIdCommand}" Style="{StaticResource SmallSortButton}" Margin="0,0,5,0"/>
-            <Button Content="Name" Command="{Binding SortByGenreNameCommand}" Style="{StaticResource SmallSortButton}"/>
-        </StackPanel>
-
-        <!-- Genres List -->
-        <DataGrid Grid.Row="2"
-                  ItemsSource="{Binding Genres}"
-                  SelectedItem="{Binding SelectedGenre}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  SelectionMode="Single"
-                  Margin="0,0,0,10">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Genre ID" Binding="{Binding GenreId}" Width="80"/>
-                <DataGridTextColumn Header="Name" Binding="{Binding GenreName}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <!-- Genre Details and Add New Genre Panel -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
+    
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Selected Genre Name -->
-                <RowDefinition Height="Auto"/> <!-- Save/Delete Buttons -->
-                <RowDefinition Height="Auto"/> <!-- Spacer for clarity -->
-                <RowDefinition Height="Auto"/> <!-- New Genre Name -->
-                <RowDefinition Height="Auto"/> <!-- Add New Genre Button -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="300"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+            
+            <!-- Page Title -->
+            <TextBlock Grid.Row="0" 
+                       Text="Genre Management" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Foreground="#2C3E50"
+                       Margin="0,0,0,20" 
+                       HorizontalAlignment="Center"/>
+            
+            <!-- Genres List -->
+            <GroupBox Grid.Row="1" Header="Genres List" Style="{StaticResource GroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Refresh Button -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <Button Content="Refresh List" 
+                                Command="{Binding LoadGenresCommand}"
+                                Width="100" 
+                                Height="30"
+                                Background="#34495E"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                    </StackPanel>
+                    
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding Genres}"
+                              SelectedItem="{Binding SelectedGenre}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              AlternatingRowBackground="#F8F9FA">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding GenreId}" Width="60"/>
+                            <DataGridTextColumn Header="Genre Name" Binding="{Binding GenreName}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </GroupBox>
+            
+            <!-- Edit Selected Genre Section -->
+            <GroupBox Grid.Row="2" Header="Edit Selected Genre" Style="{StaticResource GroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- Selected Genre Details (for editing/deleting) -->
-            <TextBlock Grid.Row="0" Grid.Column="0"
-                       Text="Selected Genre Name:"
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"
-                       Margin="0,0,10,0"/>
-            <TextBox Grid.Row="0" Grid.Column="1"
-                     Text="{Binding SelectedGenre.GenreName, UpdateSourceTrigger=PropertyChanged}"
-                     Margin="0,5"/>
+                    <!-- Genre Name -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="Genre Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                             Text="{Binding SelectedGenre.GenreName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
 
-            <!-- Control Buttons for Selected Genre -->
-            <StackPanel Grid.Row="1" Grid.Column="1"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,10,0,0">
-                <Button Content="Save Changes"
-                        Command="{Binding SaveGenreCommand}"
-                        IsEnabled="{Binding SaveGenreCommand}" /><!-- REMOVED .CanExecute -->
-                <Button Content="Delete Selected"
-                        Command="{Binding DeleteGenreCommand}"
-                        IsEnabled="{Binding DeleteGenreCommand}" /><!-- REMOVED .CanExecute -->
-            </StackPanel>
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="2" Grid.Column="1" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <Button Content="Save Changes" 
+                                Command="{Binding SaveGenreCommand}" 
+                                Width="110" 
+                                Height="32"
+                                IsEnabled="{Binding CanSaveGenre}"
+                                Margin="0,0,10,0"
+                                Background="#27AE60"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                        
+                        <Button Content="Delete Genre" 
+                                Command="{Binding DeleteGenreCommand}" 
+                                Width="110"
+                                Height="32"
+                                Background="#E74C3C"
+                                Foreground="White"
+                                BorderThickness="0"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
 
-            <!-- Separator/Spacer for New Genre section -->
-            <Rectangle Grid.Row="2" Grid.ColumnSpan="2" Height="1" Fill="#CCCCCC" Margin="0,20"/>
+            <!-- Add New Genre Section -->
+            <GroupBox Grid.Row="3" Header="Add New Genre" Style="{StaticResource GroupBoxStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- New Genre Input Fields -->
-            <TextBlock Grid.Row="3" Grid.Column="0"
-                       Text="New Genre Name:"
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"
-                       Margin="0,15,10,0"/>
-            <TextBox Grid.Row="3" Grid.Column="1"
-                     Text="{Binding NewGenreName, UpdateSourceTrigger=PropertyChanged}"
-                     Margin="0,15,0,0"/>
+                    <!-- Genre Name -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="Genre Name:" 
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" 
+                             Text="{Binding NewGenreName, UpdateSourceTrigger=PropertyChanged}" 
+                             Margin="0,5,0,10"
+                             Padding="8,5"/>
 
-            <!-- Add New Genre Button -->
-            <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,10,0,0">
-                <Button Content="Add New Genre"
-                        Command="{Binding AddGenreCommand}"
-                        IsEnabled="{Binding AddGenreCommand}" /><!-- REMOVED .CanExecute -->
-            </StackPanel>
+                    <!-- Add Button -->
+                    <StackPanel Grid.Row="2" Grid.Column="1" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <Button Content="Add New Genre" 
+                                Command="{Binding AddGenreCommand}" 
+                                Width="130" 
+                                Height="35"
+                                Background="#9B59B6"
+                                Foreground="White"
+                                BorderThickness="0"
+                                FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
         </Grid>
-
-        <!-- Loading Overlay -->
-        <Border Grid.RowSpan="4" Background="#AAFFFFFF"
-                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
-                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <ProgressBar IsIndeterminate="True"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Width="100" Height="100"/>
-        </Border>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

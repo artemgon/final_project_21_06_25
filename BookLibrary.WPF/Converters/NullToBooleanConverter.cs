@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace BookLibrary.WPF.Views
+namespace BookLibrary.WPF.Converters
 {
     public class NullToBooleanConverter : IValueConverter
     {

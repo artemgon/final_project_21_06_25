@@ -13,5 +13,6 @@ namespace DataAccess.Contracts
         public Task UpdateAsync(Author author);
         public Task DeleteAsync(int id);
         Task SaveChangesAsync();
+        Task ResetIdentitySeedAsync();
     }
 }

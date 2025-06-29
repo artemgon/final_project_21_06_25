@@ -5,10 +5,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:BookLibrary.WPF.Views"
              xmlns:viewModels="clr-namespace:ViewModels;assembly=ViewModels"
+             xmlns:Domain="clr-namespace:Domain.Enums;assembly=Domain"
+             xmlns:converters="clr-namespace:BookLibrary.WPF.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="650" d:DesignWidth="800">
     
     <UserControl.Resources>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        
         <Style TargetType="TextBlock" x:Key="FieldLabel">
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,5,10,5" />
@@ -60,11 +64,13 @@
                 <DockPanel>
                     <TextBlock Text="Status:" Style="{StaticResource FieldLabel}" Width="100" />
                     <ComboBox Width="150" HorizontalAlignment="Left" Margin="0,5,0,5"
-                              SelectedItem="{Binding CurrentBook.ReadingStatus}">
-                        <ComboBoxItem Content="Not Started" />
-                        <ComboBoxItem Content="In Progress" />
-                        <ComboBoxItem Content="Completed" />
-                        <ComboBoxItem Content="On Hold" />
+                              SelectedValue="{Binding CurrentBook.ReadingStatus}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="Not Started" Tag="0" />
+                        <ComboBoxItem Content="In Progress" Tag="1" />
+                        <ComboBoxItem Content="Completed" Tag="2" />
+                        <ComboBoxItem Content="On Hold" Tag="3" />
+                        <ComboBoxItem Content="Dropped" Tag="4" />
                     </ComboBox>
                 </DockPanel>
 
@@ -73,13 +79,14 @@
                     <TextBlock Text="Rating:" Style="{StaticResource FieldLabel}" Width="100" />
                     <StackPanel Orientation="Horizontal">
                         <ComboBox Width="50" Margin="0,5,0,5"
-                                  SelectedItem="{Binding CurrentBook.Rating}">
-                            <ComboBoxItem Content="" />
-                            <ComboBoxItem Content="1" />
-                            <ComboBoxItem Content="2" />
-                            <ComboBoxItem Content="3" />
-                            <ComboBoxItem Content="4" />
-                            <ComboBoxItem Content="5" />
+                                  SelectedValue="{Binding CurrentBook.Rating}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Content="" Tag="{x:Null}" />
+                            <ComboBoxItem Content="1" Tag="1" />
+                            <ComboBoxItem Content="2" Tag="2" />
+                            <ComboBoxItem Content="3" Tag="3" />
+                            <ComboBoxItem Content="4" Tag="4" />
+                            <ComboBoxItem Content="5" Tag="5" />
                         </ComboBox>
                         <TextBlock Text="/5" VerticalAlignment="Center" Margin="5,0,0,0"/>
                     </StackPanel>
@@ -92,14 +99,70 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <ListBox Grid.Row="0" Height="80" ItemsSource="{Binding CurrentBook.Authors}"
-                                 DisplayMemberPath="Name" />
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,5">
-                            <Button Content="Add" Width="60" Margin="0,0,5,0"/>
-                            <Button Content="Remove" Width="60"/>
-                        </StackPanel>
+                        <!-- Current Authors List with Remove Button -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Current Authors:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ListBox Height="60" ItemsSource="{Binding CurrentBook.Authors}" 
+                                         SelectedItem="{Binding SelectedCurrentAuthor}" Margin="0,0,0,10">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock>
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0} {1}">
+                                                        <Binding Path="FirstName"/>
+                                                        <Binding Path="LastName"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                            
+                            <Button Grid.Column="1" Content="Remove" Width="60" Height="30" Margin="10,25,0,0" VerticalAlignment="Top"
+                                    IsEnabled="{Binding SelectedCurrentAuthor, Converter={StaticResource NullToBooleanConverter}}"
+                                    Command="{Binding RemoveAuthorCommand}"/>
+                        </Grid>
+                        
+                        <!-- Available Authors with Add Button -->
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Available Authors:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ListBox Height="80" ItemsSource="{Binding FilteredAvailableAuthors}"
+                                         SelectedItem="{Binding SelectedAvailableAuthor}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock>
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0} {1}">
+                                                        <Binding Path="Author.FirstName"/>
+                                                        <Binding Path="Author.LastName"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                            
+                            <Button Grid.Column="1" Content="Add" Width="60" Height="30" Margin="10,25,0,0" VerticalAlignment="Top"
+                                    IsEnabled="{Binding SelectedAvailableAuthor, Converter={StaticResource NullToBooleanConverter}}"
+                                    Command="{Binding AddAuthorCommand}"/>
+                        </Grid>
                     </Grid>
                 </DockPanel>
 
@@ -110,14 +173,46 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <ListBox Grid.Row="0" Height="80" ItemsSource="{Binding CurrentBook.Genres}"
-                                 DisplayMemberPath="Name" />
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,5">
-                            <Button Content="Add" Width="60" Margin="0,0,5,0"/>
-                            <Button Content="Remove" Width="60"/>
-                        </StackPanel>
+                        <!-- Current Genres List with Remove Button -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Current Genres:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ListBox Height="60" ItemsSource="{Binding CurrentBook.Genres}" 
+                                         SelectedItem="{Binding SelectedCurrentGenre}" Margin="0,0,0,10"
+                                         DisplayMemberPath="GenreName" />
+                            </StackPanel>
+                            
+                            <Button Grid.Column="1" Content="Remove" Width="60" Height="30" Margin="10,25,0,0" VerticalAlignment="Top"
+                                    IsEnabled="{Binding SelectedCurrentGenre, Converter={StaticResource NullToBooleanConverter}}"
+                                    Command="{Binding RemoveGenreCommand}"/>
+                        </Grid>
+                        
+                        <!-- Available Genres with Add Button -->
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Available Genres:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ListBox Height="80" ItemsSource="{Binding FilteredAvailableGenres}"
+                                         SelectedItem="{Binding SelectedAvailableGenre}"
+                                         DisplayMemberPath="Genre.GenreName" />
+                            </StackPanel>
+                            
+                            <Button Grid.Column="1" Content="Add" Width="60" Height="30" Margin="10,25,0,0" VerticalAlignment="Top"
+                                    IsEnabled="{Binding SelectedAvailableGenre, Converter={StaticResource NullToBooleanConverter}}"
+                                    Command="{Binding AddGenreCommand}"/>
+                        </Grid>
                     </Grid>
                 </DockPanel>
 
@@ -137,7 +232,7 @@
 
                 <!-- Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                    <Button Content="Save" Width="80" Margin="0,0,10,0" Command="{Binding SaveCommand}" />
+                    <Button Content="Save" Width="80" Margin="0,0,10,0" Command="{Binding SaveBookCommand}" />
                     <Button Content="Cancel" Width="80" Command="{Binding CancelCommand}" />
                 </StackPanel>
             </StackPanel>
@@ -145,11 +240,34 @@
 
         <!-- Cover Image Panel -->
         <StackPanel Grid.Column="1" Margin="15,0,0,0">
+            <TextBlock Text="Book Cover" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            
+            <!-- Image Display -->
             <Border BorderBrush="LightGray" BorderThickness="1" Width="200" Height="280" HorizontalAlignment="Center">
                 <Image Source="{Binding CurrentBook.CoverImagePath, TargetNullValue='../Images/fff&amp;text=No+image+available.png'}" 
                        Stretch="Uniform" />
             </Border>
-            <Button Content="Change Cover Image" Margin="0,10,0,0" Width="150" HorizontalAlignment="Center" Command="{Binding ChangeCoverImageCommand}" />
+            
+            <!-- Image Source Options -->
+            <StackPanel Margin="0,15,0,0">
+                <!-- Local File Option -->
+                <Button Content="Select Local Image" Margin="0,0,0,10" Width="180" HorizontalAlignment="Center" 
+                        Command="{Binding ChangeCoverImageCommand}" />
+                
+                <!-- URL Option -->
+                <TextBlock Text="Or enter image URL:" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBox Name="ImageUrlTextBox" Width="180" Height="25" Margin="0,0,0,5"
+                         Text="{Binding ImageUrlInput, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Enter a direct URL to an image (jpg, png, gif, etc.)"/>
+                <Button Content="Load from URL" Width="120" HorizontalAlignment="Center" 
+                        Command="{Binding LoadImageFromUrlCommand}"
+                        IsEnabled="{Binding ImageUrlInput, Converter={StaticResource NullToBooleanConverter}}"/>
+                
+                <!-- Clear Image Option -->
+                <Button Content="Remove Image" Margin="0,15,0,0" Width="120" HorizontalAlignment="Center" 
+                        Command="{Binding RemoveImageCommand}"
+                        IsEnabled="{Binding CurrentBook.CoverImagePath, Converter={StaticResource NullToBooleanConverter}}"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>

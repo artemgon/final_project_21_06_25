@@ -2,6 +2,7 @@
 // Make sure these using statements are present at the top of your file.
 using BookLibrary.ApplicationServices.Contracts; // Assuming IBookService, IWishlistService, IGenreService are here
 using Domain.Entities; // For Book entity
+using Domain.Enums; // Add this for ReadingStatus enum
 using BookLibrary.ViewModels.Messages; // NEW: For navigation messages
 using CommunityToolkit.Mvvm.ComponentModel; // Required for [ObservableProperty] and ObservableObject
 using CommunityToolkit.Mvvm.Input;       // Required for [RelayCommand] and AsyncRelayCommand
@@ -14,7 +15,7 @@ using System;
 using ApplicationServices.Contracts;
 using ViewModels; // For StringComparison
 
-namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches your folder structure
+namespace ViewModels // Fixed namespace to match file location
 {
     // Mark BookListViewModel as 'partial' to allow CommunityToolkit.Mvvm source generation
     public partial class BookListViewModel : ViewModelBase
@@ -60,7 +61,81 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         // --- Commands ---
         // LoadBooksCommand will now be marked with [RelayCommand]
         [RelayCommand] // Auto-generates public AsyncRelayCommand LoadBooksCommand { get; }
-        private async Task LoadBooksAsync() { /* ... implementation ... */ }
+        private async Task LoadBooksAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("LoadBooksAsync: Starting to load books from database...");
+                
+                // Set loading state on UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = true;
+                });
+
+                // Execute database query
+                var allBooks = await _bookService.GetAllBooksWithDetailsAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"LoadBooksAsync: Retrieved {allBooks?.Count() ?? 0} books from service");
+                
+                // Update UI on the UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    Books.Clear();
+                    
+                    if (allBooks != null)
+                    {
+                        foreach (var book in allBooks.OrderBy(b => b.Title))
+                        {
+                            Books.Add(book);
+                            System.Diagnostics.Debug.WriteLine($"Added book to UI: {book.Title} (ID: {book.BookId})");
+                        }
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"LoadBooksAsync: UI updated. Final count in collection: {Books.Count}");
+                    
+                    // Force UI binding refresh
+                    OnPropertyChanged(nameof(Books));
+                });
+                
+                // Apply filters after loading
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (Books.Count > 0)
+                    {
+                        ApplyFilterAndSort(); // Apply current filters after loading
+                        System.Diagnostics.Debug.WriteLine($"LoadBooksAsync: After applying filters, count: {Books.Count}");
+                    }
+                });
+                
+                System.Diagnostics.Debug.WriteLine($"LoadBooksAsync: Completed successfully. Total books in UI: {Books.Count}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadBooksAsync error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"LoadBooksAsync stack trace: {ex.StackTrace}");
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show($"Error loading books: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
+            }
+            finally
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = false;
+                });
+            }
+        }
+
+        // Refresh command - same as LoadBooks but with user feedback
+        [RelayCommand]
+        private async Task RefreshBooksAsync()
+        {
+            await LoadBooksAsync();
+            MessageBox.Show("Books refreshed successfully!", "Refresh Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
         // These commands will now use the messenger for navigation instead of _mainViewModel
         [RelayCommand] // Auto-generates public RelayCommand AddBookCommand { get; }
@@ -81,32 +156,139 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         }
 
         [RelayCommand(CanExecute = nameof(CanEditOrDeleteBook))] // Auto-generates public AsyncRelayCommand DeleteBookCommand { get; }
-        private async Task DeleteBookAsync() { /* ... implementation ... */ }
+        private async Task DeleteBookAsync()
+        {
+            if (SelectedBook == null)
+                return;
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete '{SelectedBook.Title}'?\n\nThis action cannot be undone.",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                IsLoading = true;
+                try
+                {
+                    await _bookService.DeleteBookAsync(SelectedBook.BookId);
+                    Books.Remove(SelectedBook);
+                    SelectedBook = null;
+                    
+                    // Refresh the list to get updated data and potentially renumbered IDs
+                    await LoadBooksAsync();
+                    
+                    MessageBox.Show("Book deleted successfully!", "Delete Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting book: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    IsLoading = false;
+                }
+            }
+        }
 
         [RelayCommand] // Auto-generates public AsyncRelayCommand SearchCommand { get; }
-        private async Task SearchBooksAsync() { /* ... implementation ... */ }
+        private async Task SearchBooksAsync()
+        {
+            IsLoading = true;
+            try
+            {
+                ApplyFilterAndSort(); // Re-apply filters with current search criteria
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error searching books: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
 
         [RelayCommand(CanExecute = nameof(CanEditOrDeleteBook))] // Auto-generates public AsyncRelayCommand AddToWishlistCommand { get; }
-        private async Task AddToWishlistAsync() { /* ... implementation ... */ }
+        private async Task AddToWishlistAsync()
+        {
+            if (SelectedBook == null)
+                return;
 
-        // Sorting Commands are typically direct RelayCommands
-        [RelayCommand] // Auto-generates public RelayCommand SortByTitleCommand { get; }
-        private void SortByTitle() => SortBooks(nameof(Book.Title));
-        
-        [RelayCommand] // Auto-generates public RelayCommand SortByAuthorCommand { get; }
-        private void SortByAuthor() => SortBooks(nameof(Book.Authors));
-        
-        [RelayCommand] // Auto-generates public RelayCommand SortByReadingStatusCommand { get; }
-        private void SortByReadingStatus() => SortBooks(nameof(Book.ReadingStatus));
-        
-        [RelayCommand] // Auto-generates public RelayCommand SortByRatingCommand { get; }
-        private void SortByRating() => SortBooks(nameof(Book.Rating));
-        
-        [RelayCommand] // Auto-generates public RelayCommand SortByPageCountCommand { get; }
-        private void SortByPageCount() => SortBooks(nameof(Book.PageCount));
-        
-        [RelayCommand] // Auto-generates public RelayCommand SortByPublicationYearCommand { get; }
-        private void SortByPublicationYear() => SortBooks(nameof(Book.PublicationYear));
+            IsLoading = true;
+            try
+            {
+                // Check if book is already in wishlist by comparing title and author
+                var existingWishlistItems = await _wishlistService.GetAllWishlistItemsAsync();
+                if (existingWishlistItems.Any(w => w.Title == SelectedBook.Title && 
+                    w.Author == (SelectedBook.Authors?.FirstOrDefault()?.FirstName + " " + SelectedBook.Authors?.FirstOrDefault()?.LastName)?.Trim()))
+                {
+                    MessageBox.Show("This book is already in your wishlist!", "Already in Wishlist", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Create a new wishlist item from the selected book
+                var wishlistItem = new WishlistItem
+                {
+                    Title = SelectedBook.Title,
+                    Author = SelectedBook.Authors?.FirstOrDefault() != null 
+                        ? $"{SelectedBook.Authors.FirstOrDefault().FirstName} {SelectedBook.Authors.FirstOrDefault().LastName}".Trim()
+                        : "Unknown Author",
+                    ISBN = SelectedBook.ISBN,
+                    DateAdded = DateTime.Now,
+                    Notes = "" // Default empty notes
+                };
+
+                await _wishlistService.AddWishlistItemAsync(wishlistItem);
+                MessageBox.Show($"'{SelectedBook.Title}' added to wishlist!", "Added to Wishlist", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error adding book to wishlist: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        // Add missing sort commands that are referenced in the XAML
+        [RelayCommand]
+        private void SortByTitle()
+        {
+            SortBooks(nameof(Book.Title));
+        }
+
+        [RelayCommand]
+        private void SortByAuthor()
+        {
+            SortBooks(nameof(Book.Authors));
+        }
+
+        [RelayCommand]
+        private void SortByReadingStatus()
+        {
+            SortBooks(nameof(Book.ReadingStatus));
+        }
+
+        [RelayCommand]
+        private void SortByRating()
+        {
+            SortBooks(nameof(Book.Rating));
+        }
+
+        [RelayCommand]
+        private void SortByPageCount()
+        {
+            SortBooks(nameof(Book.PageCount));
+        }
+
+        [RelayCommand]
+        private void SortByPublicationYear()
+        {
+            SortBooks(nameof(Book.PublicationYear));
+        }
 
 
         // Constructor: Services are injected here by the DI container
@@ -118,7 +300,6 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
             _bookService = bookService;
             _wishlistService = wishlistService;
             _genreService = genreService;
-            // _mainViewModel = mainViewModel; // REMOVED: No longer needed
 
             Books = new ObservableCollection<Book>();
             AvailableGenres = new ObservableCollection<Genre>(); // Initialize genre collection
@@ -126,37 +307,51 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
             // Set initial filter state
             SelectedReadingStatusFilter = "All"; // Default to show all statuses
 
-            // --- IMPORTANT: Remove manual command initializations if [RelayCommand] is used on the methods ---
-            // LoadBooksCommand = new AsyncRelayCommand(LoadBooksAsync); // REMOVE THIS LINE
-            // AddBookCommand = new RelayCommand(() => _mainViewModel.NavigateToAddBookCommand.Execute(null)); // REMOVE THIS LINE
-            // EditBookCommand = new AsyncRelayCommand(EditBookAsync, CanEditOrDeleteBook); // REMOVE THIS LINE
-            // DeleteBookCommand = new AsyncRelayCommand(DeleteBookAsync, CanEditOrDeleteBook); // REMOVE THIS LINE
-            // SearchCommand = new AsyncRelayCommand(SearchBooksAsync); // REMOVE THIS LINE
-            // AddToWishlistCommand = new AsyncRelayCommand(AddToWishlistAsync, CanEditOrDeleteBook); // REMOVE THIS LINE
+            // Initialize the search term and genre filter to avoid null issues
+            SearchTerm = string.Empty;
 
-            // SortByTitleCommand = new RelayCommand(() => SortBooks(nameof(Book.Title))); // REMOVE THESE LINES
-            // SortByAuthorCommand = new RelayCommand(() => SortBooks(nameof(Book.Authors)));
-            // SortByReadingStatusCommand = new RelayCommand(() => SortBooks(nameof(Book.ReadingStatus)));
-            // SortByRatingCommand = new RelayCommand(() => SortBooks(nameof(Book.Rating)));
-            // SortByPageCountCommand = new RelayCommand(() => SortBooks(nameof(Book.PageCount)));
-            // SortByPublicationYearCommand = new RelayCommand(() => SortBooks(nameof(Book.PublicationYear)));
+            // Force initial data load when ViewModel is created, using the same pattern as AuthorManagerViewModel
+            System.Diagnostics.Debug.WriteLine("BookListViewModel constructor: Starting initial load");
+            _ = InitializeAsync();
+        }
 
+        // Override the OnPropertyChanged method to handle SelectedBook changes specifically
+        partial void OnSelectedBookChanged(Book? value)
+        {
+            System.Diagnostics.Debug.WriteLine($"OnSelectedBookChanged: New value = {value?.Title ?? "null"}");
+            
+            // Explicitly notify that the CanExecute state of commands should be re-evaluated
+            EditBookCommand.NotifyCanExecuteChanged();
+            DeleteBookCommand.NotifyCanExecuteChanged();
+            AddToWishlistCommand.NotifyCanExecuteChanged();
+            
+            System.Diagnostics.Debug.WriteLine($"OnSelectedBookChanged: Commands notified for book: {value?.Title ?? "null"}");
+        }
 
-            // Subscribe to SelectedBook property changes to update CanExecute state of buttons
-            PropertyChanged += (sender, e) =>
+        // Separate initialization method to handle async loading properly - matching AuthorManagerViewModel pattern
+        private async Task InitializeAsync()
+        {
+            try
             {
-                if (e.PropertyName == nameof(SelectedBook))
+                System.Diagnostics.Debug.WriteLine("BookListViewModel InitializeAsync: Loading books and genres...");
+                
+                // Load genres first, then books - same order as AuthorManagerViewModel
+                await LoadAvailableGenresAsync(); // Load genres for filter dropdown
+                await LoadBooksAsync(); // Load all books initially
+                
+                System.Diagnostics.Debug.WriteLine($"BookListViewModel InitializeAsync: Loaded {Books.Count} books and {AvailableGenres.Count} genres");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BookListViewModel InitializeAsync error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"BookListViewModel InitializeAsync stack trace: {ex.StackTrace}");
+                
+                // Show error on UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // Call NotifyCanExecuteChanged for the commands that depend on SelectedBook
-                    EditBookCommand.NotifyCanExecuteChanged();
-                    DeleteBookCommand.NotifyCanExecuteChanged();
-                    AddToWishlistCommand.NotifyCanExecuteChanged();
-                }
-            };
-
-            // Initial data loads when ViewModel is created (fire and forget)
-            _ = LoadBooksAsync(); // Load all books initially
-            _ = LoadAvailableGenresAsync(); // Load genres for filter dropdown
+                    MessageBox.Show($"Error loading initial data: {ex.Message}", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                });
+            }
         }
 
         // --- Predicates for Command Execution ---
@@ -167,7 +362,9 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         /// </summary>
         private bool CanEditOrDeleteBook()
         {
-            return SelectedBook != null;
+            bool canExecute = SelectedBook != null;
+            System.Diagnostics.Debug.WriteLine($"CanEditOrDeleteBook: SelectedBook is {(SelectedBook != null ? $"'{SelectedBook.Title}'" : "null")}, returning {canExecute}");
+            return canExecute;
         }
 
         // --- Asynchronous Methods (command implementations) ---
@@ -250,12 +447,17 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         /// </summary>
         private void ApplyFilterAndSort()
         {
+            System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Starting with {Books.Count} books");
+            System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: SearchTerm='{SearchTerm}', SelectedReadingStatusFilter='{SelectedReadingStatusFilter}', SelectedGenreFilter={SelectedGenreFilter?.GenreName}");
+            
             var filtered = Books.AsEnumerable(); // Start with the full loaded list
 
             // Apply Search Term filter
             if (!string.IsNullOrWhiteSpace(SearchTerm))
             {
                 string lowerSearchTerm = SearchTerm.ToLower();
+                System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Applying search term filter: '{lowerSearchTerm}'");
+                
                 filtered = filtered.Where(b =>
                     (b.Title != null && b.Title.ToLower().Contains(lowerSearchTerm)) ||
                     (b.Authors != null && b.Authors.Any() && b.Authors.Any(a =>
@@ -264,27 +466,54 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
                     (b.Summary != null && b.Summary.ToLower().Contains(lowerSearchTerm)));
             }
 
-            // Apply Reading Status filter
-            if (SelectedReadingStatusFilter != "All" && !string.IsNullOrWhiteSpace(SelectedReadingStatusFilter))
+            // Apply Reading Status filter - fix the logic here
+            if (!string.IsNullOrWhiteSpace(SelectedReadingStatusFilter) && 
+                SelectedReadingStatusFilter != "All")
             {
-                filtered = filtered.Where(b => b.ReadingStatus == SelectedReadingStatusFilter);
+                System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Applying reading status filter: '{SelectedReadingStatusFilter}'");
+                
+                // Map the UI string values to the actual enum values
+                ReadingStatus? targetStatus = SelectedReadingStatusFilter switch
+                {
+                    "To Read" => ReadingStatus.NotStarted,
+                    "Reading" => ReadingStatus.InProgress,
+                    "Finished" => ReadingStatus.Completed,
+                    "Abandoned" => ReadingStatus.Dropped,
+                    _ => null
+                };
+                
+                if (targetStatus.HasValue)
+                {
+                    filtered = filtered.Where(b => b.ReadingStatus == targetStatus.Value);
+                    System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Filtering by ReadingStatus: {targetStatus.Value}");
+                }
             }
 
-            // Apply Genre filter
+            // Apply Genre filter - ensure we handle null properly
             if (SelectedGenreFilter != null && SelectedGenreFilter.GenreId != 0) // Assuming 0 means "All Genres"
             {
-                filtered = filtered.Where(b => b.Genres.Any(g => g.GenreId == SelectedGenreFilter.GenreId));
+                System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Applying genre filter: '{SelectedGenreFilter.GenreName}'");
+                filtered = filtered.Where(b => b.Genres != null && b.Genres.Any(g => g.GenreId == SelectedGenreFilter.GenreId));
             }
+
+            System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: After filtering, found {filtered.Count()} books");
 
             // Apply current sort order to the filtered results
             IOrderedEnumerable<Book> sortedFiltered = ApplyCurrentSort(filtered);
 
-            // Update the UI-bound collection
+            // Update the UI-bound collection - but don't clear and re-add if it's the same
+            var sortedList = sortedFiltered.ToList();
+            System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Final sorted list has {sortedList.Count} books");
+            
+            // Only update if the collection actually changed
             Books.Clear();
-            foreach (var book in sortedFiltered)
+            foreach (var book in sortedList)
             {
                 Books.Add(book);
+                System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Added book to final collection: {book.Title}");
             }
+            
+            System.Diagnostics.Debug.WriteLine($"ApplyFilterAndSort: Completed. Final Books.Count = {Books.Count}");
         }
 
 
@@ -367,16 +596,48 @@ namespace BookLibrary.ViewModels.BookManagement // Ensure this namespace matches
         }
 
         // Helper to define explicit order for reading statuses
-        private int GetReadingStatusOrder(string status)
+        private int GetReadingStatusOrder(ReadingStatus? status)
         {
-            return status?.ToLower() switch
+            return status switch
             {
-                "reading" => 1,
-                "to read" => 2,
-                "finished" => 3,
-                "abandoned" => 4,
-                _ => 5, // Default for "All" or unknown statuses
+                ReadingStatus.InProgress => 1,
+                ReadingStatus.NotStarted => 2,
+                ReadingStatus.Completed => 3,
+                ReadingStatus.OnHold => 4,
+                ReadingStatus.Dropped => 5,
+                null => 6, // Default for null values
+                _ => 7, // Default for any other values
             };
+        }
+
+        // Add a debug method to test book-author relationships
+        public async Task<string> TestBookAuthorRelationshipsAsync()
+        {
+            try
+            {
+                var books = await _bookService.GetAllBooksWithDetailsAsync();
+                var result = $"Found {books.Count()} books:\n\n";
+                
+                foreach (var book in books)
+                {
+                    result += $"Book: {book.Title} (ID: {book.BookId})\n";
+                    if (book.Authors != null && book.Authors.Any())
+                    {
+                        result += $"  Authors: {string.Join(", ", book.Authors.Select(a => $"{a.FirstName} {a.LastName}"))}\n";
+                    }
+                    else
+                    {
+                        result += "  Authors: None found (this is why you see N/A)\n";
+                    }
+                    result += "\n";
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return $"Error testing relationships: {ex.Message}";
+            }
         }
     }
 }

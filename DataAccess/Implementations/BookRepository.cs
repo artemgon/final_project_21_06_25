@@ -1,12 +1,13 @@
-﻿using DataAccess.Contracts; 
+﻿using Dapper;
+using BookLibrary.DataAccess.Contracts; // fixed namespace
 using DataAccess.Database;
-using Domain.Entities; 
-using Dapper; 
+using Domain.Entities;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
-using BookLibrary.DataAccess.Contracts;
 using BookLibrary.Domain.Entities;
+using DataAccess.Contracts;
 
 namespace DataAccess.Implementations
 {
@@ -56,8 +57,8 @@ namespace DataAccess.Implementations
                         if (!bookDictionary.TryGetValue(book.BookId, out var currentBook))
                         {
                             currentBook = book;
-                            currentBook.Authors = new List<Author>(); // Initialize collections
-                            currentBook.Genres = new List<Genre>();
+                            currentBook.Authors = new ObservableCollection<Author>(); // Initialize collections
+                            currentBook.Genres = new ObservableCollection<Genre>();
                             bookDictionary.Add(currentBook.BookId, currentBook);
                         }
 
@@ -121,8 +122,8 @@ namespace DataAccess.Implementations
                         if (resultBook == null) // Only initialize the first time
                         {
                             resultBook = book;
-                            resultBook.Authors = new List<Author>();
-                            resultBook.Genres = new List<Genre>();
+                            resultBook.Authors = new ObservableCollection<Author>();
+                            resultBook.Genres = new ObservableCollection<Genre>();
                         }
 
                         if (author != null && !resultBook.Authors.Any(a => a.AuthorId == author.AuthorId))
@@ -149,13 +150,55 @@ namespace DataAccess.Implementations
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                var sql = @"
-                    INSERT INTO Books (Title, PublicationYear, ISBN, PageCount, Summary, CoverImagePath, ReadingStatus, Rating, Notes)
-                    VALUES (@Title, @PublicationYear, @ISBN, @PageCount, @Summary, @CoverImagePath, @ReadingStatus, @Rating, @Notes);
-                    SELECT CAST(SCOPE_IDENTITY() as int)";
+                connection.Open(); // Use synchronous Open() instead of OpenAsync()
+                
+                // Start a transaction to ensure data consistency
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Insert the book first
+                        var sql = @"
+                            INSERT INTO Books (Title, PublicationYear, ISBN, PageCount, Summary, CoverImagePath, ReadingStatus, Rating, Notes)
+                            VALUES (@Title, @PublicationYear, @ISBN, @PageCount, @Summary, @CoverImagePath, @ReadingStatus, @Rating, @Notes);
+                            SELECT CAST(SCOPE_IDENTITY() as int)";
 
+                        var bookId = await connection.ExecuteScalarAsync<int>(sql, book, transaction);
+                        book.BookId = bookId; // Set the generated ID back to the book object
 
-                return await connection.ExecuteScalarAsync<int>(sql, book);
+                        // Insert book-author relationships
+                        if (book.Authors != null && book.Authors.Any())
+                        {
+                            foreach (var author in book.Authors)
+                            {
+                                await connection.ExecuteAsync(
+                                    "INSERT INTO BookAuthors (BookId, AuthorId) VALUES (@BookId, @AuthorId)",
+                                    new { BookId = bookId, AuthorId = author.AuthorId },
+                                    transaction);
+                            }
+                        }
+
+                        // Insert book-genre relationships
+                        if (book.Genres != null && book.Genres.Any())
+                        {
+                            foreach (var genre in book.Genres)
+                            {
+                                await connection.ExecuteAsync(
+                                    "INSERT INTO BookGenres (BookId, GenreId) VALUES (@BookId, @GenreId)",
+                                    new { BookId = bookId, GenreId = genre.GenreId },
+                                    transaction);
+                            }
+                        }
+
+                        transaction.Commit();
+                        return bookId;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
 
@@ -163,19 +206,63 @@ namespace DataAccess.Implementations
         {
             using (var connection = _connectionFactory.CreateConnection())
             {
-                var sql = @"
-                    UPDATE Books SET
-                        Title = @Title,
-                        PublicationYear = @PublicationYear,
-                        ISBN = @ISBN,
-                        PageCount = @PageCount,
-                        Summary = @Summary,
-                        CoverImagePath = @CoverImagePath,
-                        ReadingStatus = @ReadingStatus,
-                        Rating = @Rating,
-                        Notes = @Notes
-                    WHERE BookId = @BookId";
-                await connection.ExecuteAsync(sql, book);
+                connection.Open(); // Use synchronous Open() instead of OpenAsync()
+                
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Update the book itself
+                        var sql = @"
+                            UPDATE Books SET
+                                Title = @Title,
+                                PublicationYear = @PublicationYear,
+                                ISBN = @ISBN,
+                                PageCount = @PageCount,
+                                Summary = @Summary,
+                                CoverImagePath = @CoverImagePath,
+                                ReadingStatus = @ReadingStatus,
+                                Rating = @Rating,
+                                Notes = @Notes
+                            WHERE BookId = @BookId";
+                        await connection.ExecuteAsync(sql, book, transaction);
+
+                        // Remove existing relationships
+                        await connection.ExecuteAsync("DELETE FROM BookAuthors WHERE BookId = @BookId", new { BookId = book.BookId }, transaction);
+                        await connection.ExecuteAsync("DELETE FROM BookGenres WHERE BookId = @BookId", new { BookId = book.BookId }, transaction);
+
+                        // Insert new author relationships
+                        if (book.Authors != null && book.Authors.Any())
+                        {
+                            foreach (var author in book.Authors)
+                            {
+                                await connection.ExecuteAsync(
+                                    "INSERT INTO BookAuthors (BookId, AuthorId) VALUES (@BookId, @AuthorId)",
+                                    new { BookId = book.BookId, AuthorId = author.AuthorId },
+                                    transaction);
+                            }
+                        }
+
+                        // Insert new genre relationships
+                        if (book.Genres != null && book.Genres.Any())
+                        {
+                            foreach (var genre in book.Genres)
+                            {
+                                await connection.ExecuteAsync(
+                                    "INSERT INTO BookGenres (BookId, GenreId) VALUES (@BookId, @GenreId)",
+                                    new { BookId = book.BookId, GenreId = genre.GenreId },
+                                    transaction);
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
 
@@ -286,16 +373,9 @@ namespace DataAccess.Implementations
         
         public Task SaveChangesAsync()
         {
-            // In this Dapper setup, if a connection was opened for an Add/Update/Delete operation
-            // (i.e., _connection is not null and is open), we close and dispose it here.
-            // This acts as the "commit" point for the operations done on that connection.
-            if (_connection != null && _connection.State == ConnectionState.Open)
-            {
-                _connection.Close();
-                _connection.Dispose();
-                _connection = null; // Clear the connection reference
-            }
-            // Return a completed task since there's no asynchronous database operation happening directly in this method.
+            // In this Dapper setup, SaveChangesAsync is called after each operation
+            // Since we're using individual connections for each operation and transactions where needed,
+            // this method doesn't need to do anything specific - it's just for interface compliance
             return Task.CompletedTask;
         }
     }

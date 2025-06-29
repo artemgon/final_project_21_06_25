@@ -1,190 +1,301 @@
-﻿// BookLibrary.ViewModels/GenreManagement/GenreManagerViewModel.cs
-// Make sure these using statements are present at the top of your file.
-using BookLibrary.ApplicationServices.Contracts; // Corrected namespace for IGenreService
-using Domain.Entities; // Assuming ViewModelBase is in this namespace
-using CommunityToolkit.Mvvm.ComponentModel; // Required for [ObservableProperty] and ObservableObject
-using CommunityToolkit.Mvvm.Input;       // Required for [RelayCommand] and AsyncRelayCommand
+﻿using BookLibrary.ApplicationServices.Contracts;
+using BookLibrary.Domain.Entities;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
-using System.Linq; // Required for LINQ methods like OrderBy
-using System.Threading.Tasks; // Required for Task, async/await
-using System.Windows; // Required for MessageBox (for temporary feedback)
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using System;
+using System.ComponentModel;
 using ApplicationServices.Contracts;
+using Domain.Entities;
 using ViewModels;
-using RelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand; // Required for Exception and StringComparison
 
-namespace BookLibrary.ViewModels.GenreManagement // Ensure this namespace matches your folder structure
+namespace BookLibrary.ViewModels.GenreManagement
 {
-    // Mark GenreManagerViewModel as 'partial' to allow CommunityToolkit.Mvvm source generation
-    public partial class GenreManagerViewModel : ViewModelBase // Assuming ViewModelBase inherits from ObservableObject
+    public partial class GenreManagerViewModel : ViewModelBase
     {
-        private readonly IGenreService _genreService; // Dependency for genre-related operations
+        private readonly IGenreService _genreService;
 
-        // ObservableCollection to hold the list of genres displayed in the UI
         [ObservableProperty]
         private ObservableCollection<Genre> genres;
 
-        // Property to hold the currently selected genre in the UI (e.g., DataGrid)
         [ObservableProperty]
         private Genre selectedGenre;
 
-        // Property for the input field when adding a new genre
         [ObservableProperty]
         private string newGenreName;
 
-        // Property to control the visibility of the loading indicator
+        [ObservableProperty]
+        private string newGenreDescription;
+
         [ObservableProperty]
         private bool isLoading;
 
-        // Commands for sorting the genres list
-        public RelayCommand SortByGenreIdCommand { get; }
-        public RelayCommand SortByGenreNameCommand { get; }
+        [ObservableProperty]
+        private bool canSaveGenre;
 
+        // Manual command implementations to ensure they work properly
+        private AsyncRelayCommand _addGenreCommand;
+        public AsyncRelayCommand AddGenreCommand
+        {
+            get
+            {
+                if (_addGenreCommand == null)
+                {
+                    _addGenreCommand = new AsyncRelayCommand(AddGenreAsync, CanAddGenre);
+                    System.Diagnostics.Debug.WriteLine("AddGenreCommand created manually");
+                }
+                return _addGenreCommand;
+            }
+        }
 
-        // Constructor: Services are injected here by the Dependency Injection container
+        private AsyncRelayCommand _deleteGenreCommand;
+        public AsyncRelayCommand DeleteGenreCommand
+        {
+            get
+            {
+                if (_deleteGenreCommand == null)
+                {
+                    _deleteGenreCommand = new AsyncRelayCommand(DeleteGenreAsync, CanDeleteGenre);
+                    System.Diagnostics.Debug.WriteLine("DeleteGenreCommand created manually");
+                }
+                return _deleteGenreCommand;
+            }
+        }
+
+        // Add partial methods to handle property changes for new genre fields
+        partial void OnNewGenreNameChanged(string value)
+        {
+            System.Diagnostics.Debug.WriteLine($"NewGenreName changed to: '{value}'");
+            AddGenreCommand?.NotifyCanExecuteChanged();
+        }
+
+        partial void OnNewGenreDescriptionChanged(string value)
+        {
+            System.Diagnostics.Debug.WriteLine($"NewGenreDescription changed to: '{value}'");
+            AddGenreCommand?.NotifyCanExecuteChanged();
+        }
+
+        // Add partial method to handle SelectedGenre changes and update DeleteGenreCommand
+        partial void OnSelectedGenreChanged(Genre value)
+        {
+            System.Diagnostics.Debug.WriteLine($"SelectedGenre changed to: {value?.GenreName}");
+            DeleteGenreCommand?.NotifyCanExecuteChanged();
+            System.Diagnostics.Debug.WriteLine($"DeleteGenreCommand.CanExecute after change: {DeleteGenreCommand?.CanExecute(null)}");
+        }
+
+        private string currentSortProperty = nameof(Genre.GenreId);
+        private bool isAscending = true;
+
         public GenreManagerViewModel(IGenreService genreService)
         {
             _genreService = genreService;
-            // Initialize the backing field for 'Genres'
             genres = new ObservableCollection<Genre>();
-            
-            // Initialize sorting commands
-            SortByGenreIdCommand = new RelayCommand(() => SortGenres(nameof(Genre.GenreId)));
-            SortByGenreNameCommand = new RelayCommand(() => SortGenres(nameof(Genre.GenreName)));
+            canSaveGenre = false;
 
-            // Subscribe to property changes to notify commands when their CanExecute state might change.
+            // Subscribe to property changes
             PropertyChanged += (sender, e) =>
             {
-                // When SelectedGenre changes, re-evaluate Save and Delete commands
                 if (e.PropertyName == nameof(SelectedGenre))
                 {
                     SaveGenreCommand.NotifyCanExecuteChanged();
                     DeleteGenreCommand.NotifyCanExecuteChanged();
                 }
-                // When NewGenreName changes, re-evaluate Add command
-                if (e.PropertyName == nameof(NewGenreName))
+                else if (e.PropertyName == nameof(NewGenreName) ||
+                         e.PropertyName == nameof(NewGenreDescription))
                 {
                     AddGenreCommand.NotifyCanExecuteChanged();
                 }
             };
-
-            // Load existing genres when the ViewModel is initialized (fire and forget)
-            _ = LoadGenresAsync();
+            
+            _ = InitializeAsync();
         }
 
-        // --- Predicates for Command Execution (to enable/disable buttons) ---
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("GenreManagerViewModel: Loading genres...");
+                await LoadGenresAsync();
+                System.Diagnostics.Debug.WriteLine($"GenreManagerViewModel: Loaded {Genres.Count} genres");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GenreManagerViewModel error: {ex.Message}");
+                MessageBox.Show($"Error loading initial data: {ex.Message}", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
 
-        /// <summary>
-        /// Determines if the AddGenreCommand can be executed.
-        /// Requires the NewGenreName to be non-empty.
-        /// </summary>
+        partial void OnSelectedGenreChanged(Genre oldValue, Genre newValue)
+        {
+            if (oldValue != null)
+            {
+                oldValue.PropertyChanged -= SelectedGenre_PropertyChanged;
+            }
+
+            if (newValue != null)
+            {
+                newValue.PropertyChanged += SelectedGenre_PropertyChanged;
+                UpdateCanSaveGenre();
+            }
+            else
+            {
+                CanSaveGenre = false;
+            }
+        }
+        
+        private void SelectedGenre_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Genre.GenreName) ||
+                e.PropertyName == nameof(Genre.Description))
+            {
+                UpdateCanSaveGenre();
+                SaveGenreCommand.NotifyCanExecuteChanged();
+            }
+        }
+
+        // --- Predicates for Command Execution ---
         private bool CanAddGenre()
         {
             return !string.IsNullOrWhiteSpace(NewGenreName);
         }
 
-        /// <summary>
-        /// Determines if the SaveGenreCommand can be executed.
-        /// Requires a genre to be selected AND its name to be non-empty.
-        /// </summary>
-        private bool CanSaveGenre()
+        private bool CanSaveGenreFunc()
         {
-            return SelectedGenre != null && !string.IsNullOrWhiteSpace(SelectedGenre.GenreName);
+            return SelectedGenre != null && 
+                   !string.IsNullOrWhiteSpace(SelectedGenre.GenreName);
         }
 
-        /// <summary>
-        /// Determines if the DeleteGenreCommand can be executed.
-        /// Requires a genre to be selected.
-        /// </summary>
         private bool CanDeleteGenre()
         {
             return SelectedGenre != null;
         }
 
-        // --- Asynchronous Methods (command implementations) ---
-
-        /// <summary>
-        /// Loads all genres from the database and populates the Genres collection.
-        /// Shows/hides a loading indicator during the operation.
-        /// </summary>
+        // --- Commands ---
         [RelayCommand]
         private async Task LoadGenresAsync()
         {
-            IsLoading = true; // Show loading indicator
             try
             {
-                var loadedGenres = await _genreService.GetAllGenresAsync(); // Call service to get genres
-                Genres.Clear(); // Clear existing items in the ObservableCollection
-                foreach (var genre in loadedGenres)
+                System.Diagnostics.Debug.WriteLine("LoadGenresAsync: Starting to load genres from database...");
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Genres.Add(genre); // Add newly loaded genres
-                }
+                    IsLoading = true;
+                });
+                
+                var loadedGenres = await _genreService.GetAllGenresAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"LoadGenresAsync: Retrieved {loadedGenres?.Count() ?? 0} genres from service");
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    Genres.Clear();
+                    
+                    if (loadedGenres != null)
+                    {
+                        foreach (var genre in loadedGenres)
+                        {
+                            Genres.Add(genre);
+                            System.Diagnostics.Debug.WriteLine($"Added genre to UI: {genre.GenreName} (ID: {genre.GenreId})");
+                        }
+                    }
+                    
+                    OnPropertyChanged(nameof(Genres));
+                });
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (Genres.Count > 0)
+                    {
+                        SortGenres(currentSortProperty, false);
+                    }
+                });
+                
+                System.Diagnostics.Debug.WriteLine($"LoadGenresAsync: Completed successfully. Total genres in UI: {Genres.Count}");
             }
             catch (Exception ex)
             {
-                // Display any errors that occur during loading
-                MessageBox.Show($"Error loading genres: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"LoadGenresAsync error: {ex.Message}");
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show($"Error loading genres: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
             }
             finally
             {
-                IsLoading = false; // Hide loading indicator
-                // Notify commands that their CanExecute state might have changed (e.g., if the list became empty)
-                DeleteGenreCommand.NotifyCanExecuteChanged();
-                SaveGenreCommand.NotifyCanExecuteChanged();
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsLoading = false;
+                    SaveGenreCommand?.NotifyCanExecuteChanged();
+                    DeleteGenreCommand?.NotifyCanExecuteChanged();
+                });
             }
         }
 
-        /// <summary>
-        /// Adds a new genre to the database based on input field.
-        /// Shows/hides a loading indicator and refreshes the list upon success.
-        /// </summary>
-        [RelayCommand]
+        // Remove the [RelayCommand] attribute since we're manually implementing AddGenreCommand
         private async Task AddGenreAsync()
         {
-            if (!CanAddGenre()) return; // Pre-check validation
+            if (!CanAddGenre()) return;
 
-            IsLoading = true; // Show loading indicator
+            IsLoading = true;
             try
             {
                 var newGenre = new Genre
                 {
-                    GenreName = NewGenreName
+                    GenreName = NewGenreName,
+                    Description = NewGenreDescription
                 };
 
-                await _genreService.AddGenreAsync(newGenre); // Call service to add the genre to DB
-
-                // Refresh the list to display the newly added genre
-                await LoadGenresAsync();
-
-                // Clear input field after successful addition
+                System.Diagnostics.Debug.WriteLine($"Adding genre: {newGenre.GenreName}");
+                await _genreService.AddGenreAsync(newGenre);
+                System.Diagnostics.Debug.WriteLine("Genre added to database successfully");
+                
                 NewGenreName = string.Empty;
-
-                MessageBox.Show("Genre added successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                NewGenreDescription = string.Empty;
+                
+                await LoadGenresAsync();
+                
+                OnPropertyChanged(nameof(Genres));
+                
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (Genres.Any())
+                    {
+                        var addedGenre = Genres.OrderByDescending(g => g.GenreId).FirstOrDefault();
+                        if (addedGenre != null)
+                        {
+                            SelectedGenre = addedGenre;
+                        }
+                    }
+                });
+                
+                MessageBox.Show($"Genre added successfully! Total genres: {Genres.Count}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error adding genre: {ex.Message}");
                 MessageBox.Show($"Error adding genre: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                IsLoading = false; // Hide loading indicator
+                IsLoading = false;
             }
         }
 
-        /// <summary>
-        /// Saves changes to the currently selected genre in the database.
-        /// Shows/hides a loading indicator and refreshes the list.
-        /// </summary>
         [RelayCommand]
         private async Task SaveGenreAsync()
         {
-            if (!CanSaveGenre()) return; // Pre-check validation
+            if (!CanSaveGenreFunc()) return;
 
-            IsLoading = true; // Show loading indicator
+            IsLoading = true;
             try
             {
-                await _genreService.UpdateGenreAsync(SelectedGenre); // Call service to update the genre in DB
-                await LoadGenresAsync(); // Refresh the list
+                await _genreService.UpdateGenreAsync(SelectedGenre);
+                await LoadGenresAsync();
                 MessageBox.Show("Genre updated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -193,28 +304,24 @@ namespace BookLibrary.ViewModels.GenreManagement // Ensure this namespace matche
             }
             finally
             {
-                IsLoading = false; // Hide loading indicator
+                IsLoading = false;
             }
         }
 
-        /// <summary>
-        /// Deletes the currently selected genre from the database.
-        /// Shows/hides a loading indicator and refreshes the list.
-        /// </summary>
-        [RelayCommand]
+        // Remove the [RelayCommand] attribute since we're manually implementing DeleteGenreCommand
         private async Task DeleteGenreAsync()
         {
-            if (!CanDeleteGenre()) return; // Pre-check validation
+            if (!CanDeleteGenre()) return;
 
             if (MessageBox.Show($"Are you sure you want to delete '{SelectedGenre.GenreName}'?",
                                 "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                IsLoading = true; // Show loading indicator
+                IsLoading = true;
                 try
                 {
-                    await _genreService.DeleteGenreAsync(SelectedGenre.GenreId); // Call service to delete by ID
-                    await LoadGenresAsync(); // Refresh the list
-                    SelectedGenre = null; // Clear selection after deletion
+                    await _genreService.DeleteGenreAsync(SelectedGenre.GenreId);
+                    await LoadGenresAsync();
+                    SelectedGenre = null;
                     MessageBox.Show("Genre deleted successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -223,39 +330,90 @@ namespace BookLibrary.ViewModels.GenreManagement // Ensure this namespace matche
                 }
                 finally
                 {
-                    IsLoading = false; // Hide loading indicator
+                    IsLoading = false;
                 }
             }
         }
 
-        // --- Sorting Logic ---
-        /// <summary>
-        /// Sorts the Genres collection based on the specified property name.
-        /// </summary>
-        /// <param name="propertyName">The name of the property to sort by (e.g., "GenreId", "GenreName").</param>
-        private void SortGenres(string propertyName)
-        {
-            IOrderedEnumerable<Genre> sortedGenres;
+        [RelayCommand]
+        private void SortById() => SortGenres(nameof(Genre.GenreId));
 
-            switch (propertyName)
+        [RelayCommand]
+        private void SortByName() => SortGenres(nameof(Genre.GenreName));
+
+        private void SortGenres(string propertyName, bool toggleDirection = true)
+        {
+            if (Genres == null || Genres.Count == 0)
             {
-                case nameof(Genre.GenreId):
-                    sortedGenres = Genres.OrderBy(g => g.GenreId);
-                    break;
-                case nameof(Genre.GenreName):
-                    sortedGenres = Genres.OrderBy(g => g.GenreName, StringComparer.OrdinalIgnoreCase);
-                    break;
-                default:
-                    return; // Do nothing if an invalid property name is passed
+                System.Diagnostics.Debug.WriteLine("SortGenres: No genres to sort, skipping.");
+                return;
             }
 
-            // Clear the existing ObservableCollection and repopulate it with the sorted items.
-            // This triggers UI updates efficiently.
+            if (currentSortProperty == propertyName && toggleDirection)
+            {
+                isAscending = !isAscending;
+            }
+            else
+            {
+                currentSortProperty = propertyName;
+                isAscending = true;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"SortGenres: Sorting {Genres.Count} genres by {propertyName}, ascending: {isAscending}");
+
+            IOrderedEnumerable<Genre> sortedGenres;
+
+            switch (currentSortProperty)
+            {
+                case nameof(Genre.GenreId):
+                    sortedGenres = isAscending ? Genres.OrderBy(g => g.GenreId) : Genres.OrderByDescending(g => g.GenreId);
+                    break;
+                case nameof(Genre.GenreName):
+                    sortedGenres = isAscending ? Genres.OrderBy(g => g.GenreName, StringComparer.OrdinalIgnoreCase)
+                                                : Genres.OrderByDescending(g => g.GenreName, StringComparer.OrdinalIgnoreCase);
+                    break;
+                default:
+                    System.Diagnostics.Debug.WriteLine($"SortGenres: Unknown property {propertyName}, keeping original order");
+                    return;
+            }
+
+            var sortedList = sortedGenres.ToList();
+            System.Diagnostics.Debug.WriteLine($"SortGenres: Created sorted list with {sortedList.Count} genres");
+
             Genres.Clear();
-            foreach (var genre in sortedGenres)
+            foreach (var genre in sortedList)
             {
                 Genres.Add(genre);
             }
+            
+            System.Diagnostics.Debug.WriteLine($"SortGenres: Completed. Final Genres count: {Genres.Count}");
+        }
+
+        private void UpdateCanSaveGenre()
+        {
+            if (SelectedGenre == null)
+            {
+                CanSaveGenre = false;
+                return;
+            }
+
+            bool genreNameFilled = !string.IsNullOrWhiteSpace(SelectedGenre.GenreName);
+            
+            System.Diagnostics.Debug.WriteLine($"UpdateCanSaveGenre: GenreName filled: {genreNameFilled}");
+            
+            if (CanSaveGenre == genreNameFilled)
+            {
+                CanSaveGenre = !genreNameFilled;
+            }
+            CanSaveGenre = genreNameFilled;
+            
+            SaveGenreCommand?.NotifyCanExecuteChanged();
+        }
+
+        partial void OnCanSaveGenreChanged(bool value)
+        {
+            System.Diagnostics.Debug.WriteLine($"CanSaveGenre property changed to: {value}");
+            OnPropertyChanged(nameof(CanSaveGenre));
         }
     }
 }
